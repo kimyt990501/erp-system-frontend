@@ -1,30 +1,4 @@
-<template>
-  <div class="login-page-wrapper">
-    
-    <div class="login-header">
-      <i class="pi pi-shield login-icon"></i>
-      <h2>ERP System</h2>
-    </div>
-
-    <Panel header="로그인" class="login-panel">
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">이메일:</label>
-          <InputText id="email" type="email" v-model="email" required />
-        </div>
-        <div class="form-group">
-          <label for="password">비밀번호:</label>
-          <Password id="password" v-model="password" required :feedback="false" toggleMask />
-        </div>
-
-        <Button type="submit" :loading="isLoading" class="p-button-primary" label="로그인" />
-        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-      </form>
-    </Panel>
-  </div>
-</template>
-  
-  <script setup lang="ts">
+<script setup lang="ts">
   import { ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
@@ -85,9 +59,35 @@
       isLoading.value = false;
     }
   };
-  </script>
+</script>
+
+<template>
+  <div class="login-page-wrapper">
+    
+    <div class="login-header">
+      <i class="pi pi-shield login-icon"></i>
+      <h2>ERP System</h2>
+    </div>
+
+    <Panel header="로그인" class="login-panel">
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="form-group">
+          <label for="email">이메일:</label>
+          <InputText id="email" type="email" v-model="email" required />
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호:</label>
+          <Password id="password" v-model="password" required :feedback="false" toggleMask />
+        </div>
+
+        <Button type="submit" :loading="isLoading" class="p-button-primary" label="로그인" />
+        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+      </form>
+    </Panel>
+  </div>
+</template>
   
-  <style scoped>
+<style scoped>
   /* (수정) 3. 기존 스타일을 아래 코드로 덮어쓰거나 수정 */
   
   .login-page-wrapper {
@@ -149,4 +149,4 @@
     margin-top: 15px;
     width: 100%;
   }
-  </style>
+</style>

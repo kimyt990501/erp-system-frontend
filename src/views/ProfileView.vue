@@ -1,35 +1,4 @@
-<template>
-    <Panel header="내 프로필" class="profile-panel">
-      <div v-if="user" class="profile-details">
-        <div class="profile-field">
-          <label>이름</label>
-          <span>{{ user.name }}</span>
-        </div>
-        <div class="profile-field">
-          <label>이메일 (로그인 ID)</label>
-          <span>{{ user.email }}</span>
-        </div>
-        <div class="profile-field">
-          <label>입사일</label>
-          <span>{{ user.hire_date }}</span>
-        </div>
-        <div class="profile-field">
-          <label>계정 상태</label>
-          <span>
-            <Tag :severity="user.is_active ? 'success' : 'danger'">
-              {{ user.is_active ? '활성' : '비활성' }}
-            </Tag>
-          </span>
-        </div>
-  
-        </div>
-      <div v-else>
-        사용자 정보를 불러오는 중이거나 오류가 발생했습니다.
-      </div>
-    </Panel>
-  </template>
-  
-  <script setup lang="ts">
+<script setup lang="ts">
   import { computed } from 'vue';
   import { useAuthStore } from '@/stores/auth';
   
@@ -41,9 +10,40 @@
   // 1. authStore에서 사용자 정보 가져오기
   const authStore = useAuthStore();
   const user = computed(() => authStore.user);
-  </script>
+</script>
+
+<template>
+  <Panel header="내 프로필" class="profile-panel">
+    <div v-if="user" class="profile-details">
+      <div class="profile-field">
+        <label>이름</label>
+        <span>{{ user.name }}</span>
+      </div>
+      <div class="profile-field">
+        <label>이메일 (로그인 ID)</label>
+        <span>{{ user.email }}</span>
+      </div>
+      <div class="profile-field">
+        <label>입사일</label>
+        <span>{{ user.hire_date }}</span>
+      </div>
+      <div class="profile-field">
+        <label>계정 상태</label>
+        <span>
+          <Tag :severity="user.is_active ? 'success' : 'danger'">
+            {{ user.is_active ? '활성' : '비활성' }}
+          </Tag>
+        </span>
+      </div>
+
+      </div>
+    <div v-else>
+      사용자 정보를 불러오는 중이거나 오류가 발생했습니다.
+    </div>
+  </Panel>
+</template>
   
-  <style scoped>
+<style scoped>
   .profile-panel {
     max-width: 800px;
     margin: 0 auto; /* 페이지 중앙에 위치 */
@@ -90,4 +90,4 @@
     background-color: #242938;
     color: #e1e4e8;
   }
-  </style>
+</style>

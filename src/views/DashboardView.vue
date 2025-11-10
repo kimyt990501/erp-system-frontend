@@ -1,113 +1,4 @@
-<template>
-    <div class="dashboard-grid">
-      <!-- 근태 카드 -->
-      <Card class="info-card">
-        <template #title>
-          <div class="card-title">
-            <i class="pi pi-clock"></i>
-            <span>오늘의 근태</span>
-          </div>
-        </template>
-        <template #content>
-          <div v-if="isLoadingAttendance" class="attendance-content">
-            <Skeleton height="2rem" class="mb-2"></Skeleton>
-            <Skeleton height="2rem" class="mb-2"></Skeleton>
-            <Skeleton height="1.5rem" width="60%" class="mx-auto"></Skeleton>
-          </div>
-          <div v-else class="attendance-content">
-            <div class="attendance-time-row">
-              <span class="time-label">출근</span>
-              <span :class="['time-value', todayAttendance?.check_in ? 'recorded' : 'not-recorded']">
-                {{ todayAttendance?.check_in || '--:--' }}
-              </span>
-            </div>
-            <div class="attendance-time-row">
-              <span class="time-label">퇴근</span>
-              <span :class="['time-value', todayAttendance?.check_out ? 'recorded' : 'not-recorded']">
-                {{ todayAttendance?.check_out || '--:--' }}
-              </span>
-            </div>
-            <div v-if="monthlyStats" class="attendance-stats">
-              <small>이번 달 출석률: <strong>{{ monthlyStats.attendance_rate.toFixed(1) }}%</strong></small>
-            </div>
-          </div>
-        </template>
-        <template #footer>
-          <Button
-            label="근태 관리"
-            icon="pi pi-arrow-right"
-            class="p-button-outlined"
-            @click="goTo('/attendance')"
-          />
-        </template>
-      </Card>
-
-      <!-- 연차 카드 -->
-      <Card class="info-card">
-        <template #title>
-          <div class="card-title">
-            <i class="pi pi-calendar"></i>
-            <span>내 연차 현황</span>
-          </div>
-        </template>
-        <template #content>
-          <div v-if="isLoadingBalance" class="balance-content">
-            <Skeleton height="3rem" class="mb-3"></Skeleton>
-            <Skeleton height="1.5rem" width="60%" class="mx-auto mb-2"></Skeleton>
-            <Skeleton height="1rem" width="80%" class="mx-auto"></Skeleton>
-          </div>
-          <div v-else-if="balance" class="balance-content">
-            <div class="balance-days">{{ balance.remaining_days }}</div>
-            <div class="balance-unit">일 남음</div>
-            <small>(총 {{ balance.total_granted }}일 중 {{ balance.total_used }}일 사용)</small>
-          </div>
-          <div v-else class="error-text">연차 정보를 불러오지 못했습니다.</div>
-        </template>
-        <template #footer>
-          <Button
-            label="연차 신청/내역 보기"
-            icon="pi pi-arrow-right"
-            class="p-button-outlined"
-            @click="goTo('/leave')"
-          />
-        </template>
-      </Card>
-
-      <!-- 급여 카드 -->
-      <Card class="info-card">
-        <template #title>
-          <div class="card-title">
-            <i class="pi pi-wallet"></i>
-            <span>최근 급여 명세서</span>
-          </div>
-        </template>
-        <template #content>
-          <div v-if="isLoadingSalary" class="salary-content">
-            <Skeleton height="1.5rem" width="50%" class="mx-auto mb-2"></Skeleton>
-            <Skeleton height="3rem" class="mb-3"></Skeleton>
-            <Skeleton height="1rem" width="60%" class="mx-auto"></Skeleton>
-          </div>
-          <div v-else-if="latestSalary" class="salary-content">
-            <div class="salary-month">{{ latestSalary.pay_month }} 지급</div>
-            <div class="salary-netpay">{{ formatCurrency(latestSalary.net_pay) }}</div>
-            <small>(기본급 {{ formatCurrency(latestSalary.base_pay) }})</small>
-          </div>
-          <div v-else class="info-text">입력된 급여 내역이 없습니다.</div>
-        </template>
-        <template #footer>
-          <Button
-            label="급여 입력/내역 보기"
-            icon="pi pi-arrow-right"
-            class="p-button-outlined"
-            @click="goTo('/salary')"
-          />
-        </template>
-      </Card>
-
-      </div>
-  </template>
-  
-  <script setup lang="ts">
+<script setup lang="ts">
   import { ref, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -191,9 +82,119 @@
     if (value === undefined || value === null) return '0 원';
     return value.toLocaleString('ko-KR') + ' 원';
   };
-  </script>
-  
-  <style scoped>
+</script>
+
+
+<template>
+  <div class="dashboard-grid">
+    <!-- 근태 카드 -->
+    <Card class="info-card">
+      <template #title>
+        <div class="card-title">
+          <i class="pi pi-clock"></i>
+          <span>오늘의 근태</span>
+        </div>
+      </template>
+      <template #content>
+        <div v-if="isLoadingAttendance" class="attendance-content">
+          <Skeleton height="2rem" class="mb-2"></Skeleton>
+          <Skeleton height="2rem" class="mb-2"></Skeleton>
+          <Skeleton height="1.5rem" width="60%" class="mx-auto"></Skeleton>
+        </div>
+        <div v-else class="attendance-content">
+          <div class="attendance-time-row">
+            <span class="time-label">출근</span>
+            <span :class="['time-value', todayAttendance?.check_in ? 'recorded' : 'not-recorded']">
+              {{ todayAttendance?.check_in || '--:--' }}
+            </span>
+          </div>
+          <div class="attendance-time-row">
+            <span class="time-label">퇴근</span>
+            <span :class="['time-value', todayAttendance?.check_out ? 'recorded' : 'not-recorded']">
+              {{ todayAttendance?.check_out || '--:--' }}
+            </span>
+          </div>
+          <div v-if="monthlyStats" class="attendance-stats">
+            <small>이번 달 출석률: <strong>{{ monthlyStats.attendance_rate.toFixed(1) }}%</strong></small>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <Button
+          label="근태 관리"
+          icon="pi pi-arrow-right"
+          class="p-button-outlined"
+          @click="goTo('/attendance')"
+        />
+      </template>
+    </Card>
+
+    <!-- 연차 카드 -->
+    <Card class="info-card">
+      <template #title>
+        <div class="card-title">
+          <i class="pi pi-calendar"></i>
+          <span>내 연차 현황</span>
+        </div>
+      </template>
+      <template #content>
+        <div v-if="isLoadingBalance" class="balance-content">
+          <Skeleton height="3rem" class="mb-3"></Skeleton>
+          <Skeleton height="1.5rem" width="60%" class="mx-auto mb-2"></Skeleton>
+          <Skeleton height="1rem" width="80%" class="mx-auto"></Skeleton>
+        </div>
+        <div v-else-if="balance" class="balance-content">
+          <div class="balance-days">{{ balance.remaining_days }}</div>
+          <div class="balance-unit">일 남음</div>
+          <small>(총 {{ balance.total_granted }}일 중 {{ balance.total_used }}일 사용)</small>
+        </div>
+        <div v-else class="error-text">연차 정보를 불러오지 못했습니다.</div>
+      </template>
+      <template #footer>
+        <Button
+          label="연차 신청/내역 보기"
+          icon="pi pi-arrow-right"
+          class="p-button-outlined"
+          @click="goTo('/leave')"
+        />
+      </template>
+    </Card>
+
+    <!-- 급여 카드 -->
+    <Card class="info-card">
+      <template #title>
+        <div class="card-title">
+          <i class="pi pi-wallet"></i>
+          <span>최근 급여 명세서</span>
+        </div>
+      </template>
+      <template #content>
+        <div v-if="isLoadingSalary" class="salary-content">
+          <Skeleton height="1.5rem" width="50%" class="mx-auto mb-2"></Skeleton>
+          <Skeleton height="3rem" class="mb-3"></Skeleton>
+          <Skeleton height="1rem" width="60%" class="mx-auto"></Skeleton>
+        </div>
+        <div v-else-if="latestSalary" class="salary-content">
+          <div class="salary-month">{{ latestSalary.pay_month }} 지급</div>
+          <div class="salary-netpay">{{ formatCurrency(latestSalary.net_pay) }}</div>
+          <small>(기본급 {{ formatCurrency(latestSalary.base_pay) }})</small>
+        </div>
+        <div v-else class="info-text">입력된 급여 내역이 없습니다.</div>
+      </template>
+      <template #footer>
+        <Button
+          label="급여 입력/내역 보기"
+          icon="pi pi-arrow-right"
+          class="p-button-outlined"
+          @click="goTo('/salary')"
+        />
+      </template>
+    </Card>
+
+    </div>
+</template>
+
+<style scoped>
   .dashboard-grid {
     display: grid;
     /* 반응형: 최소 300px, 자동으로 열 개수 조정 */
@@ -351,4 +352,4 @@
     margin-left: auto;
     margin-right: auto;
   }
-  </style>
+</style>

@@ -1,125 +1,4 @@
-<template>
-    <div class="leave-management">
-      <div class="left-column">
-        <!-- 연차 현황 -->
-        <Panel header="내 연차 현황" class="leave-balance-panel">
-          <div v-if="isLoadingBalance" class="balance-details">
-            <div>
-              <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
-              <Skeleton height="1.5rem" width="50%"></Skeleton>
-            </div>
-            <div>
-              <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
-              <Skeleton height="1.5rem" width="50%"></Skeleton>
-            </div>
-            <div>
-              <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
-              <Skeleton height="1.5rem" width="50%"></Skeleton>
-            </div>
-          </div>
-          <div v-else-if="balanceError" class="error-message">
-            연차 현황을 불러오는 데 실패했습니다.
-          </div>
-          <div v-else-if="balance" class="balance-details">
-            <div>
-              <strong>총 부여된 연차</strong>
-              <span>{{ balance.total_granted }} 일</span>
-            </div>
-            <div>
-              <strong>총 사용한 연차</strong>
-              <span>{{ balance.total_used }} 일</span>
-            </div>
-            <div class="remaining">
-              <strong>남은 연차</strong>
-              <span>{{ balance.remaining_days }} 일</span>
-            </div>
-          </div>
-        </Panel>
-
-        <!-- 연차 신청 폼 -->
-        <Panel header="연차 신청" class="leave-request-form-panel">
-          <form @submit.prevent="handleSubmit">
-            <div class="form-group">
-              <label for="start_date">시작일 <span class="required">*</span></label>
-              <Calendar
-                id="start_date"
-                v-model="newRequest.start_date"
-                dateFormat="yy-mm-dd"
-                placeholder="시작일 선택"
-                :minDate="new Date()"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="end_date">종료일 <span class="required">*</span></label>
-              <Calendar
-                id="end_date"
-                v-model="newRequest.end_date"
-                dateFormat="yy-mm-dd"
-                placeholder="종료일 선택"
-                :minDate="newRequest.start_date || new Date()"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="reason">사유</label>
-              <Textarea
-                id="reason"
-                v-model="newRequest.reason"
-                rows="3"
-                placeholder="연차 사유를 입력하세요 (선택)"
-              />
-            </div>
-
-            <div v-if="calculatedDays > 0" class="info-message">
-              <i class="pi pi-info-circle"></i>
-              <span>신청 일수: <strong>{{ calculatedDays }}일</strong></span>
-            </div>
-
-            <div v-if="validationError" class="validation-error">
-              <i class="pi pi-exclamation-triangle"></i>
-              <span>{{ validationError }}</span>
-            </div>
-
-            <Button
-              type="submit"
-              label="연차 신청하기"
-              icon="pi pi-send"
-              :loading="isSubmitting"
-              class="p-button-primary submit-button"
-              :disabled="!canSubmit"
-            />
-          </form>
-        </Panel>
-      </div>
-
-      <!-- 연차 신청 내역 -->
-      <Panel header="연차 신청 내역" class="leave-requests-panel">
-        <DataTable
-          :value="requests"
-          :loading="isLoadingRequests"
-          stripedRows
-          showGridlines
-          responsiveLayout="scroll"
-        >
-          <template #empty> 연차 신청 내역이 없습니다. </template>
-          <template #loading> 내역을 불러오는 중입니다... </template>
-
-          <Column field="start_date" header="시작일" :sortable="true"></Column>
-          <Column field="end_date" header="종료일" :sortable="true"></Column>
-          <Column field="days_used" header="사용 일수" style="text-align: center;"></Column>
-          <Column field="reason" header="사유"></Column>
-          <Column field="status" header="상태" :sortable="true" style="text-align: center;">
-            <template #body="slotProps">
-              <Tag :value="getStatusLabel(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" />
-            </template>
-          </Column>
-        </DataTable>
-      </Panel>
-    </div>
-  </template>
-
-  <script setup lang="ts">
+<script setup lang="ts">
   import { ref, onMounted, reactive, computed, watch } from 'vue';
   import { useToast } from 'primevue/usetoast';
   import { getMyLeaveBalance, getMyLeaveRequests, createLeaveRequest } from '@/services/leaveService';
@@ -283,9 +162,130 @@
       default: return 'info';
     }
   };
-  </script>
+</script>
 
-  <style scoped>
+<template>
+  <div class="leave-management">
+    <div class="left-column">
+      <!-- 연차 현황 -->
+      <Panel header="내 연차 현황" class="leave-balance-panel">
+        <div v-if="isLoadingBalance" class="balance-details">
+          <div>
+            <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
+            <Skeleton height="1.5rem" width="50%"></Skeleton>
+          </div>
+          <div>
+            <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
+            <Skeleton height="1.5rem" width="50%"></Skeleton>
+          </div>
+          <div>
+            <Skeleton height="1rem" width="70%" class="mb-2"></Skeleton>
+            <Skeleton height="1.5rem" width="50%"></Skeleton>
+          </div>
+        </div>
+        <div v-else-if="balanceError" class="error-message">
+          연차 현황을 불러오는 데 실패했습니다.
+        </div>
+        <div v-else-if="balance" class="balance-details">
+          <div>
+            <strong>총 부여된 연차</strong>
+            <span>{{ balance.total_granted }} 일</span>
+          </div>
+          <div>
+            <strong>총 사용한 연차</strong>
+            <span>{{ balance.total_used }} 일</span>
+          </div>
+          <div class="remaining">
+            <strong>남은 연차</strong>
+            <span>{{ balance.remaining_days }} 일</span>
+          </div>
+        </div>
+      </Panel>
+
+      <!-- 연차 신청 폼 -->
+      <Panel header="연차 신청" class="leave-request-form-panel">
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label for="start_date">시작일 <span class="required">*</span></label>
+            <Calendar
+              id="start_date"
+              v-model="newRequest.start_date"
+              dateFormat="yy-mm-dd"
+              placeholder="시작일 선택"
+              :minDate="new Date()"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="end_date">종료일 <span class="required">*</span></label>
+            <Calendar
+              id="end_date"
+              v-model="newRequest.end_date"
+              dateFormat="yy-mm-dd"
+              placeholder="종료일 선택"
+              :minDate="newRequest.start_date || new Date()"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="reason">사유</label>
+            <Textarea
+              id="reason"
+              v-model="newRequest.reason"
+              rows="3"
+              placeholder="연차 사유를 입력하세요 (선택)"
+            />
+          </div>
+
+          <div v-if="calculatedDays > 0" class="info-message">
+            <i class="pi pi-info-circle"></i>
+            <span>신청 일수: <strong>{{ calculatedDays }}일</strong></span>
+          </div>
+
+          <div v-if="validationError" class="validation-error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ validationError }}</span>
+          </div>
+
+          <Button
+            type="submit"
+            label="연차 신청하기"
+            icon="pi pi-send"
+            :loading="isSubmitting"
+            class="p-button-primary submit-button"
+            :disabled="!canSubmit"
+          />
+        </form>
+      </Panel>
+    </div>
+
+    <!-- 연차 신청 내역 -->
+    <Panel header="연차 신청 내역" class="leave-requests-panel">
+      <DataTable
+        :value="requests"
+        :loading="isLoadingRequests"
+        stripedRows
+        showGridlines
+        responsiveLayout="scroll"
+      >
+        <template #empty> 연차 신청 내역이 없습니다. </template>
+        <template #loading> 내역을 불러오는 중입니다... </template>
+
+        <Column field="start_date" header="시작일" :sortable="true"></Column>
+        <Column field="end_date" header="종료일" :sortable="true"></Column>
+        <Column field="days_used" header="사용 일수" style="text-align: center;"></Column>
+        <Column field="reason" header="사유"></Column>
+        <Column field="status" header="상태" :sortable="true" style="text-align: center;">
+          <template #body="slotProps">
+            <Tag :value="getStatusLabel(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" />
+          </template>
+        </Column>
+      </DataTable>
+    </Panel>
+  </div>
+</template>
+
+<style scoped>
   .leave-management {
     display: flex;
     flex-direction: row;
@@ -540,4 +540,4 @@
   .mb-2 {
     margin-bottom: 0.5rem;
   }
-  </style>
+</style>

@@ -1,93 +1,4 @@
-<template>
-    <div class="salary-management">
-      <Panel header="급여 명세서 입력" class="salary-form-panel">
-        <form @submit.prevent="handleSubmit">
-          <div class="form-group">
-            <label for="pay_month">지급 연월</label>
-            <Calendar 
-              id="pay_month" 
-              v-model="newStatement.pay_month" 
-              view="month" 
-              dateFormat="yy-mm" 
-              placeholder="YYYY-MM"
-              required 
-            />
-          </div>
-          <div class="form-group">
-            <label for="base_pay">기본급</label>
-            <InputNumber 
-              id="base_pay" 
-              v-model="newStatement.base_pay" 
-              mode="decimal" 
-              :useGrouping="false" 
-              required 
-            />
-          </div>
-          <div class="form-group">
-            <label for="bonus">상여금</label>
-            <InputNumber id="bonus" v-model="newStatement.bonus" mode="decimal" :useGrouping="false" />
-          </div>
-          <div class="form-group">
-            <label for="deductions">공제액 (세금 등)</label>
-            <InputNumber id="deductions" v-model="newStatement.deductions" mode="decimal" :useGrouping="false" />
-          </div>
-          <div class="form-group">
-            <label for="net_pay">실수령액</label>
-            <InputNumber 
-                id="net_pay" 
-                v-model="newStatement.net_pay" 
-                mode="decimal" 
-                :useGrouping="false" 
-                required 
-                readonly  
-            />
-          </div>
-          
-          <Button 
-            type="submit" 
-            label="입력 완료" 
-            icon="pi pi-check" 
-            :loading="isSubmitting" 
-            class="p-button-primary" 
-          />
-          <Message v-if="submitError" severity="error" :closable="false">
-            {{ submitError }}
-          </Message>
-        </form>
-      </Panel>
-  
-      <Panel header="급여 내역" class="salary-list-panel">
-        <DataTable
-          :value="statements"
-          :loading="isLoading"
-          stripedRows
-          showGridlines
-          responsiveLayout="scroll"
-        >
-          <template #empty> 입력된 급여 내역이 없습니다. </template>
-          <template #loading> 내역을 불러오는 중입니다... </template>
-
-          <Column field="pay_month" header="지급 연월" :sortable="true" style="text-align: center;"></Column>
-          <Column field="base_pay" header="기본급" class="amount-column">
-            <template #body="slotProps">{{ formatCurrency(slotProps.data.base_pay) }}</template>
-          </Column>
-          <Column field="bonus" header="상여금" class="amount-column">
-            <template #body="slotProps">{{ formatCurrency(slotProps.data.bonus) }}</template>
-          </Column>
-          <Column field="deductions" header="공제액" class="amount-column">
-            <template #body="slotProps">{{ formatCurrency(slotProps.data.deductions) }}</template>
-          </Column>
-          <Column field="net_pay" header="실수령액" :sortable="true" class="amount-column">
-            <template #body="slotProps">
-              <strong class="net-pay-highlight">{{ formatCurrency(slotProps.data.net_pay) }}</strong>
-            </template>
-          </Column>
-        </DataTable>
-      </Panel>
-    </div>
-  </template>
-  
-  <script setup lang="ts">
+<script setup lang="ts">
   import { ref, onMounted, reactive, watch } from 'vue';
   import { useToast } from 'primevue/usetoast';
   import { getMySalaryStatements, createSalaryStatement } from '@/services/salaryService';
@@ -216,9 +127,98 @@
   const formatCurrency = (value: number) => {
     return value.toLocaleString('ko-KR') + ' 원';
   };
-  </script>
+</script>
+
+<template>
+  <div class="salary-management">
+    <Panel header="급여 명세서 입력" class="salary-form-panel">
+      <form @submit.prevent="handleSubmit">
+        <div class="form-group">
+          <label for="pay_month">지급 연월</label>
+          <Calendar 
+            id="pay_month" 
+            v-model="newStatement.pay_month" 
+            view="month" 
+            dateFormat="yy-mm" 
+            placeholder="YYYY-MM"
+            required 
+          />
+        </div>
+        <div class="form-group">
+          <label for="base_pay">기본급</label>
+          <InputNumber 
+            id="base_pay" 
+            v-model="newStatement.base_pay" 
+            mode="decimal" 
+            :useGrouping="false" 
+            required 
+          />
+        </div>
+        <div class="form-group">
+          <label for="bonus">상여금</label>
+          <InputNumber id="bonus" v-model="newStatement.bonus" mode="decimal" :useGrouping="false" />
+        </div>
+        <div class="form-group">
+          <label for="deductions">공제액 (세금 등)</label>
+          <InputNumber id="deductions" v-model="newStatement.deductions" mode="decimal" :useGrouping="false" />
+        </div>
+        <div class="form-group">
+          <label for="net_pay">실수령액</label>
+          <InputNumber 
+              id="net_pay" 
+              v-model="newStatement.net_pay" 
+              mode="decimal" 
+              :useGrouping="false" 
+              required 
+              readonly  
+          />
+        </div>
+        
+        <Button 
+          type="submit" 
+          label="입력 완료" 
+          icon="pi pi-check" 
+          :loading="isSubmitting" 
+          class="p-button-primary" 
+        />
+        <Message v-if="submitError" severity="error" :closable="false">
+          {{ submitError }}
+        </Message>
+      </form>
+    </Panel>
+
+    <Panel header="급여 내역" class="salary-list-panel">
+      <DataTable
+        :value="statements"
+        :loading="isLoading"
+        stripedRows
+        showGridlines
+        responsiveLayout="scroll"
+      >
+        <template #empty> 입력된 급여 내역이 없습니다. </template>
+        <template #loading> 내역을 불러오는 중입니다... </template>
+
+        <Column field="pay_month" header="지급 연월" :sortable="true" style="text-align: center;"></Column>
+        <Column field="base_pay" header="기본급" class="amount-column">
+          <template #body="slotProps">{{ formatCurrency(slotProps.data.base_pay) }}</template>
+        </Column>
+        <Column field="bonus" header="상여금" class="amount-column">
+          <template #body="slotProps">{{ formatCurrency(slotProps.data.bonus) }}</template>
+        </Column>
+        <Column field="deductions" header="공제액" class="amount-column">
+          <template #body="slotProps">{{ formatCurrency(slotProps.data.deductions) }}</template>
+        </Column>
+        <Column field="net_pay" header="실수령액" :sortable="true" class="amount-column">
+          <template #body="slotProps">
+            <strong class="net-pay-highlight">{{ formatCurrency(slotProps.data.net_pay) }}</strong>
+          </template>
+        </Column>
+      </DataTable>
+    </Panel>
+  </div>
+</template>
   
-  <style scoped>
+<style scoped>
   .salary-management {
     display: flex;
     flex-direction: row;
@@ -379,4 +379,4 @@
   .form-group label {
     color: #a8b2d1;
   }
-  </style>
+</style>
