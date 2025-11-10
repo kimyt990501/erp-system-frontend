@@ -1,3 +1,65 @@
+<script setup lang="ts">
+  import { ref, onMounted } from 'vue';
+  import { getAllUsers } from '@/services/adminService';
+  import type { User } from '@/types/user';
+
+  // PrimeVue 컴포넌트 임포트
+  import Panel from 'primevue/panel';
+  import DataTable from 'primevue/datatable';
+  import Column from 'primevue/column';
+  import Tag from 'primevue/tag';
+  import InputText from 'primevue/inputtext';
+  import Dropdown from 'primevue/dropdown';
+
+  // 상태 정의
+  const users = ref<User[]>([]);
+  const isLoading = ref(true);
+
+  // 필터 설정
+  const filters = ref({
+    name: { value: null, matchMode: 'contains' },
+    email: { value: null, matchMode: 'contains' },
+    role: { value: null, matchMode: 'equals' },
+    is_active: { value: null, matchMode: 'equals' }
+  });
+
+  // 권한 옵션
+  const roleOptions = [
+    { label: '일반', value: 'user' },
+    { label: '관리자', value: 'admin' }
+  ];
+
+  // 상태 옵션
+  const activeOptions = [
+    { label: '활성', value: true },
+    { label: '비활성', value: false }
+  ];
+
+  // 데이터 로드
+  const loadUsers = async () => {
+    try {
+      isLoading.value = true;
+      users.value = await getAllUsers();
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  // 마운트 시 데이터 로드
+  onMounted(loadUsers);
+
+  // Helper 함수
+  const getRoleLabel = (role: string) => {
+    return role === 'admin' ? '관리자' : '일반';
+  };
+
+  const getRoleSeverity = (role: string) => {
+    return role === 'admin' ? 'info' : 'secondary';
+  };
+</script>
+
 <template>
   <div class="admin-users">
     <Panel header="사용자 관리 (관리자)" class="users-panel">
@@ -65,68 +127,6 @@
     </Panel>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { getAllUsers } from '@/services/adminService';
-import type { User } from '@/types/user';
-
-// PrimeVue 컴포넌트 임포트
-import Panel from 'primevue/panel';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Tag from 'primevue/tag';
-import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
-
-// 상태 정의
-const users = ref<User[]>([]);
-const isLoading = ref(true);
-
-// 필터 설정
-const filters = ref({
-  name: { value: null, matchMode: 'contains' },
-  email: { value: null, matchMode: 'contains' },
-  role: { value: null, matchMode: 'equals' },
-  is_active: { value: null, matchMode: 'equals' }
-});
-
-// 권한 옵션
-const roleOptions = [
-  { label: '일반', value: 'user' },
-  { label: '관리자', value: 'admin' }
-];
-
-// 상태 옵션
-const activeOptions = [
-  { label: '활성', value: true },
-  { label: '비활성', value: false }
-];
-
-// 데이터 로드
-const loadUsers = async () => {
-  try {
-    isLoading.value = true;
-    users.value = await getAllUsers();
-  } catch (error) {
-    console.error('Failed to fetch users:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// 마운트 시 데이터 로드
-onMounted(loadUsers);
-
-// Helper 함수
-const getRoleLabel = (role: string) => {
-  return role === 'admin' ? '관리자' : '일반';
-};
-
-const getRoleSeverity = (role: string) => {
-  return role === 'admin' ? 'info' : 'secondary';
-};
-</script>
 
 <style scoped>
 .admin-users {

@@ -1,3 +1,110 @@
+<script setup lang="ts">
+  import { ref, onMounted } from 'vue';
+  import { getAllLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '@/services/adminService';
+  import type { AdminLeaveRequest } from '@/types/leave';
+
+  // PrimeVue 컴포넌트 임포트
+  import Panel from 'primevue/panel';
+  import DataTable from 'primevue/datatable';
+  import Column from 'primevue/column';
+  import Tag from 'primevue/tag';
+  import Button from 'primevue/button';
+  import InputText from 'primevue/inputtext';
+  import Dropdown from 'primevue/dropdown';
+
+  // 상태 정의
+  const requests = ref<AdminLeaveRequest[]>([]);
+  const isLoading = ref(true);
+  const actionLoading = ref<number | null>(null);
+
+  // 필터 설정
+  const filters = ref({
+    user_name: { value: null, matchMode: 'contains' },
+    status: { value: null, matchMode: 'equals' }
+  });
+
+  // 상태 옵션
+  const statusOptions = [
+    { label: '대기', value: 'pending' },
+    { label: '승인', value: 'approved' },
+    { label: '거절', value: 'rejected' }
+  ];
+
+  // 데이터 로드
+  const loadRequests = async () => {
+    try {
+      isLoading.value = true;
+      requests.value = await getAllLeaveRequests();
+    } catch (error) {
+      console.error('Failed to fetch leave requests:', error);
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  // 마운트 시 데이터 로드
+  onMounted(loadRequests);
+
+  // 승인 처리
+  const handleApprove = async (requestId: number) => {
+    try {
+      actionLoading.value = requestId;
+      await approveLeaveRequest(requestId);
+      await loadRequests(); // 목록 새로고침
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      alert('승인 처리에 실패했습니다.');
+    } finally {
+      actionLoading.value = null;
+    }
+  };
+
+  // 거절 처리
+  const handleReject = async (requestId: number) => {
+    try {
+      actionLoading.value = requestId;
+      await rejectLeaveRequest(requestId);
+      await loadRequests(); // 목록 새로고침
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      alert('거절 처리에 실패했습니다.');
+    } finally {
+      actionLoading.value = null;
+    }
+  };
+
+  // Helper 함수
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved': return '승인';
+      case 'pending': return '대기';
+      case 'rejected': return '거절';
+      default: return status;
+    }
+  };
+
+  const getStatusSeverity = (status: string) => {
+    switch (status) {
+      case 'approved': return 'success';
+      case 'pending': return 'warning';
+      case 'rejected': return 'danger';
+      default: return 'info';
+    }
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    if (!dateTime) return '-';
+    const date = new Date(dateTime);
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+</script>
+
 <template>
   <div class="admin-leave-requests">
     <Panel header="연차 승인 관리 (관리자)" class="requests-panel">
@@ -74,113 +181,6 @@
     </Panel>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { getAllLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '@/services/adminService';
-import type { AdminLeaveRequest } from '@/types/leave';
-
-// PrimeVue 컴포넌트 임포트
-import Panel from 'primevue/panel';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Tag from 'primevue/tag';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
-
-// 상태 정의
-const requests = ref<AdminLeaveRequest[]>([]);
-const isLoading = ref(true);
-const actionLoading = ref<number | null>(null);
-
-// 필터 설정
-const filters = ref({
-  user_name: { value: null, matchMode: 'contains' },
-  status: { value: null, matchMode: 'equals' }
-});
-
-// 상태 옵션
-const statusOptions = [
-  { label: '대기', value: 'pending' },
-  { label: '승인', value: 'approved' },
-  { label: '거절', value: 'rejected' }
-];
-
-// 데이터 로드
-const loadRequests = async () => {
-  try {
-    isLoading.value = true;
-    requests.value = await getAllLeaveRequests();
-  } catch (error) {
-    console.error('Failed to fetch leave requests:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// 마운트 시 데이터 로드
-onMounted(loadRequests);
-
-// 승인 처리
-const handleApprove = async (requestId: number) => {
-  try {
-    actionLoading.value = requestId;
-    await approveLeaveRequest(requestId);
-    await loadRequests(); // 목록 새로고침
-  } catch (error) {
-    console.error('Failed to approve request:', error);
-    alert('승인 처리에 실패했습니다.');
-  } finally {
-    actionLoading.value = null;
-  }
-};
-
-// 거절 처리
-const handleReject = async (requestId: number) => {
-  try {
-    actionLoading.value = requestId;
-    await rejectLeaveRequest(requestId);
-    await loadRequests(); // 목록 새로고침
-  } catch (error) {
-    console.error('Failed to reject request:', error);
-    alert('거절 처리에 실패했습니다.');
-  } finally {
-    actionLoading.value = null;
-  }
-};
-
-// Helper 함수
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'approved': return '승인';
-    case 'pending': return '대기';
-    case 'rejected': return '거절';
-    default: return status;
-  }
-};
-
-const getStatusSeverity = (status: string) => {
-  switch (status) {
-    case 'approved': return 'success';
-    case 'pending': return 'warning';
-    case 'rejected': return 'danger';
-    default: return 'info';
-  }
-};
-
-const formatDateTime = (dateTime: string) => {
-  if (!dateTime) return '-';
-  const date = new Date(dateTime);
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-</script>
 
 <style scoped>
 .admin-leave-requests {
