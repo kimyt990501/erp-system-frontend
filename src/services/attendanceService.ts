@@ -105,8 +105,15 @@ export const getAllAttendanceRecords = async (
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
 
-    const response = await api.get<AdminAttendanceRecord[]>('/attendance/admin/all-records', { params });
-    return response.data || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await api.get<any[]>('/attendance/admin/all-records', { params });
+    const records = response.data || [];
+
+    return records.map((record) => ({
+      ...record,
+      user_name: record.user.name,
+      user_email: record.user.email
+    }));
   } catch (error) {
     console.error('Failed to fetch all attendance records:', error);
     return [];
