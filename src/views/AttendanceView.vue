@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { ref, onMounted, computed, watch } from 'vue';
-  import { useToast } from 'primevue/usetoast';
-  import { format, startOfMonth, endOfMonth } from 'date-fns';
+  import { ref, onMounted } from 'vue';
+  import { format } from 'date-fns';
   import {
     getTodayAttendance,
     checkIn,
@@ -10,6 +9,12 @@
     getMyAttendanceStats
   } from '@/services/attendanceService';
   import type { AttendanceRecord, AttendanceStats } from '@/types/attendance';
+
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useToastNotification } from '@/composables/useToastNotification';
+  import { useStatusMapping } from '@/composables/useStatusMapping';
+  import { useDateFiltering } from '@/composables/useDateFiltering';
 
   // PrimeVue 컴포넌트
   import Panel from 'primevue/panel';
@@ -20,28 +25,37 @@
   import Column from 'primevue/column';
   import Calendar from 'primevue/calendar';
 
-  const toast = useToast();
+  // Custom Components
+  import StatCard from '@/components/StatCard.vue';
+  import StatusTag from '@/components/StatusTag.vue';
+
+  // Composables 초기화
+  const { isLoading: isLoadingToday, withLoading: withLoadingToday } = useLoading(true);
+  const { isLoading: isLoadingStats, withLoading: withLoadingStats } = useLoading(true);
+  const { isLoading: isLoadingRecords, withLoading: withLoadingRecords } = useLoading(true);
+  const { isLoading: isCheckingIn, withLoading: withCheckingIn } = useLoading();
+  const { isLoading: isCheckingOut, withLoading: withCheckingOut } = useLoading();
+
+  const { showSuccess, showError, withErrorHandling } = useToastNotification();
+  const { getAttendanceLabel, getAttendanceSeverity } = useStatusMapping();
+  const {
+    startDate: filterStartDate,
+    endDate: filterEndDate,
+    formattedStartDate,
+    formattedEndDate,
+  } = useDateFiltering('range');
 
   // 오늘 날짜
   const today = new Date();
 
   // 오늘 근태 상태
   const todayRecord = ref<AttendanceRecord | null>(null);
-  const isLoadingToday = ref(true);
-  const isCheckingIn = ref(false);
-  const isCheckingOut = ref(false);
 
   // 통계 상태
   const stats = ref<AttendanceStats | null>(null);
-  const isLoadingStats = ref(true);
 
   // 기록 상태
   const records = ref<AttendanceRecord[]>([]);
-  const isLoadingRecords = ref(true);
-
-  // 필터 날짜
-  const filterStartDate = ref<Date>(startOfMonth(today));
-  const filterEndDate = ref<Date>(endOfMonth(today));
 
   // 날짜 포맷팅
   const formatDate = (date: Date) => {
@@ -57,140 +71,87 @@
 
   // 오늘 근태 로드
   const loadTodayAttendance = async () => {
-    try {
-      isLoadingToday.value = true;
+    await withLoadingToday(async () => {
       todayRecord.value = await getTodayAttendance();
-    } catch (error) {
-      console.error('Failed to load today attendance:', error);
-    } finally {
-      isLoadingToday.value = false;
-    }
+    });
   };
 
   // 통계 로드
   const loadStats = async () => {
-    try {
-      isLoadingStats.value = true;
-      const start = format(filterStartDate.value, 'yyyy-MM-dd');
-      const end = format(filterEndDate.value, 'yyyy-MM-dd');
-      stats.value = await getMyAttendanceStats(start, end);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    } finally {
-      isLoadingStats.value = false;
-    }
+    await withLoadingStats(async () => {
+      stats.value = await getMyAttendanceStats(formattedStartDate.value, formattedEndDate.value);
+    });
   };
 
   // 기록 로드
   const loadRecords = async () => {
-    try {
-      isLoadingRecords.value = true;
-      const start = format(filterStartDate.value, 'yyyy-MM-dd');
-      const end = format(filterEndDate.value, 'yyyy-MM-dd');
-      records.value = await getMyAttendanceRecords(start, end);
-    } catch (error) {
-      console.error('Failed to load records:', error);
-    } finally {
-      isLoadingRecords.value = false;
-    }
+    await withLoadingRecords(async () => {
+      records.value = await getMyAttendanceRecords(formattedStartDate.value, formattedEndDate.value);
+    });
   };
 
   // 출근 체크인
   const handleCheckIn = async () => {
-    try {
-      isCheckingIn.value = true;
+    await withCheckingIn(async () => {
       const workDate = format(today, 'yyyy-MM-dd');
       const checkInTime = getCurrentTime();
 
-      todayRecord.value = await checkIn({
-        work_date: workDate,
-        check_in: checkInTime
-      });
+      const result = await withErrorHandling(
+        async () => {
+          return await checkIn({
+            work_date: workDate,
+            check_in: checkInTime
+          });
+        },
+        {
+          summary: '출근 체크인 완료',
+          detail: `${checkInTime}에 출근하셨습니다.`
+        },
+        '출근 체크인 실패'
+      );
 
-      toast.add({
-        severity: 'success',
-        summary: '출근 체크인 완료',
-        detail: `${checkInTime}에 출근하셨습니다.`,
-        life: 3000
-      });
-
-      // 통계와 기록 새로고침
-      await loadStats();
-      await loadRecords();
-    } catch (error: any) {
-      console.error('Failed to check in:', error);
-      toast.add({
-        severity: 'error',
-        summary: '출근 체크인 실패',
-        detail: error.response?.data?.detail || '출근 체크인에 실패했습니다.',
-        life: 5000
-      });
-    } finally {
-      isCheckingIn.value = false;
-    }
+      if (result) {
+        todayRecord.value = result;
+        // 통계와 기록 새로고침
+        await Promise.all([loadStats(), loadRecords()]);
+      }
+    });
   };
 
   // 퇴근 체크아웃
   const handleCheckOut = async () => {
-    try {
-      isCheckingOut.value = true;
+    await withCheckingOut(async () => {
       const workDate = format(today, 'yyyy-MM-dd');
       const checkOutTime = getCurrentTime();
 
-      todayRecord.value = await checkOut(workDate, {
-        check_out: checkOutTime
-      });
+      const result = await withErrorHandling(
+        async () => {
+          return await checkOut(workDate, {
+            check_out: checkOutTime
+          });
+        },
+        {
+          summary: '퇴근 체크아웃 완료',
+          detail: `${checkOutTime}에 퇴근하셨습니다. 수고하셨습니다!`
+        },
+        '퇴근 체크아웃 실패'
+      );
 
-      toast.add({
-        severity: 'success',
-        summary: '퇴근 체크아웃 완료',
-        detail: `${checkOutTime}에 퇴근하셨습니다. 수고하셨습니다!`,
-        life: 3000
-      });
-
-      // 통계와 기록 새로고침
-      await loadStats();
-      await loadRecords();
-    } catch (error: any) {
-      console.error('Failed to check out:', error);
-      toast.add({
-        severity: 'error',
-        summary: '퇴근 체크아웃 실패',
-        detail: error.response?.data?.detail || '퇴근 체크아웃에 실패했습니다.',
-        life: 5000
-      });
-    } finally {
-      isCheckingOut.value = false;
-    }
-  };
-
-  // 상태 라벨
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'present': return '정상';
-      case 'late': return '지각';
-      case 'early_leave': return '조퇴';
-      case 'absent': return '결근';
-      default: return status;
-    }
-  };
-
-  // 상태 색상
-  const getStatusSeverity = (status: string) => {
-    switch (status) {
-      case 'present': return 'success';
-      case 'late': return 'warning';
-      case 'early_leave': return 'warn';
-      case 'absent': return 'danger';
-      default: return 'info';
-    }
+      if (result) {
+        todayRecord.value = result;
+        // 통계와 기록 새로고침
+        await Promise.all([loadStats(), loadRecords()]);
+      }
+    });
   };
 
   // 컴포넌트 마운트 시 데이터 로드
   onMounted(async () => {
-    await loadTodayAttendance();
-    await loadStats();
-    await loadRecords();
+    await Promise.all([
+      loadTodayAttendance(),
+      loadStats(),
+      loadRecords()
+    ]);
   });
 </script>
 
@@ -261,30 +222,12 @@
           <Skeleton height="2rem"></Skeleton>
         </div>
         <div v-else-if="stats" class="stats-content">
-          <div class="stat-item">
-            <span class="stat-label">총 근무일</span>
-            <span class="stat-value">{{ stats.total_days }}일</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">정상 출근</span>
-            <span class="stat-value present">{{ stats.present_days }}일</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">지각</span>
-            <span class="stat-value late">{{ stats.late_days }}일</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">조퇴</span>
-            <span class="stat-value early-leave">{{ stats.early_leave_days }}일</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">결근</span>
-            <span class="stat-value absent">{{ stats.absent_days }}일</span>
-          </div>
-          <div class="stat-item highlight">
-            <span class="stat-label">출석률</span>
-            <span class="stat-value">{{ stats.attendance_rate.toFixed(1) }}%</span>
-          </div>
+          <StatCard label="총 근무일" :value="`${stats.total_days}일`" />
+          <StatCard label="정상 출근" :value="`${stats.present_days}일`" color="success" />
+          <StatCard label="지각" :value="`${stats.late_days}일`" color="warning" />
+          <StatCard label="조퇴" :value="`${stats.early_leave_days}일`" color="info" />
+          <StatCard label="결근" :value="`${stats.absent_days}일`" color="danger" />
+          <StatCard label="출석률" :value="`${stats.attendance_rate.toFixed(1)}%`" variant="highlight" icon="pi-chart-line" />
         </div>
       </Panel>
 
@@ -343,10 +286,7 @@
           </Column>
           <Column field="status" header="상태" :sortable="true" style="text-align: center;">
             <template #body="slotProps">
-              <Tag
-                :value="getStatusLabel(slotProps.data.status)"
-                :severity="getStatusSeverity(slotProps.data.status)"
-              />
+              <StatusTag type="attendance" :value="slotProps.data.status" />
             </template>
           </Column>
           <Column field="notes" header="비고">

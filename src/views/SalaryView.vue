@@ -1,9 +1,12 @@
 <script setup lang="ts">
   import { ref, onMounted, reactive, watch } from 'vue';
-  import { useToast } from 'primevue/usetoast';
   import { getMySalaryStatements, createSalaryStatement } from '@/services/salaryService';
   import type { SalaryStatement, SalaryStatementCreate } from '@/types/salary';
-  import { format } from 'date-fns'; // 날짜 포맷팅 라이브러리 (필요시 npm install date-fns)
+  import { format } from 'date-fns';
+
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useToastNotification } from '@/composables/useToastNotification';
 
   // PrimeVue 컴포넌트 임포트
   import Panel from 'primevue/panel';
@@ -14,15 +17,18 @@
   import Calendar from 'primevue/calendar';
   import Message from 'primevue/message';
 
-  // Toast 사용
-  const toast = useToast();
-  
+  // Custom Components
+  import FormGroup from '@/components/FormGroup.vue';
+
+  // Composables 초기화
+  const { isLoading, withLoading } = useLoading(true);
+  const { isLoading: isSubmitting, withLoading: withSubmitting } = useLoading();
+  const { showWarning, withErrorHandling } = useToastNotification();
+
   // --- 테이블(목록) 관련 상태 ---
   const statements = ref<SalaryStatement[]>([]);
-  const isLoading = ref(true);
-  
+
   // --- 폼(입력) 관련 상태 ---
-  const isSubmitting = ref(false);
   const submitError = ref<string | null>(null);
   const newStatement = reactive<{
     pay_month: Date | null;
@@ -39,90 +45,67 @@
   });
 
   watch(
-  () => [newStatement.base_pay, newStatement.bonus, newStatement.deductions],
-  ([basePay, bonus, deductions]) => {
-    
-    // (수정!) 각 값이 null/undefined일 경우 0을 사용 (?? 0)
-    const bp = basePay ?? 0;
-    const bo = bonus ?? 0;
-    const de = deductions ?? 0;
+    () => [newStatement.base_pay, newStatement.bonus, newStatement.deductions],
+    ([basePay, bonus, deductions]) => {
+      // 각 값이 null/undefined일 경우 0을 사용
+      const bp = basePay ?? 0;
+      const bo = bonus ?? 0;
+      const de = deductions ?? 0;
 
-    // 세 값 중 하나라도 변하면 newStatement.net_pay를 다시 계산
-    newStatement.net_pay = bp + bo - de;
-  }
-);
-  
+      // 실수령액 자동 계산
+      newStatement.net_pay = bp + bo - de;
+    }
+  );
+
   // 데이터 로드 함수
   const loadStatements = async () => {
-    try {
-      isLoading.value = true;
+    await withLoading(async () => {
       statements.value = await getMySalaryStatements();
-    } catch (error) {
-      console.error('Failed to fetch salary statements:', error);
-    } finally {
-      isLoading.value = false;
-    }
+    });
   };
-  
+
   // 컴포넌트 마운트 시 데이터 로드
   onMounted(loadStatements);
-  
+
   // 폼 제출 핸들러
   const handleSubmit = async () => {
-    isSubmitting.value = true;
     submitError.value = null;
-  
-    try {
-      // 1. pay_month가 Date 객체로 왔을 수 있으므로 "YYYY-MM" 문자열로 변환
-      if (!newStatement.pay_month) {
-        toast.add({
-          severity: 'warn',
-          summary: '입력 확인',
-          detail: '지급 연월을 선택해주세요.',
-          life: 3000
-        });
-        return;
-      }
 
+    // 유효성 검사
+    if (!newStatement.pay_month) {
+      showWarning('입력 확인', '지급 연월을 선택해주세요.');
+      return;
+    }
+
+    await withSubmitting(async () => {
       const dataToSubmit: SalaryStatementCreate = {
-        pay_month: format(newStatement.pay_month, 'yyyy-MM'),
+        pay_month: format(newStatement.pay_month!, 'yyyy-MM'),
         base_pay: newStatement.base_pay,
         bonus: newStatement.bonus,
         deductions: newStatement.deductions,
         net_pay: newStatement.net_pay
       };
-  
-      // 2. API 호출
-      await createSalaryStatement(dataToSubmit);
 
-      // 3. 성공 시: 폼 초기화 및 테이블 새로고침
-      Object.assign(newStatement, {
-        pay_month: null, base_pay: 0, bonus: 0, deductions: 0, net_pay: 0
-      });
-      await loadStatements(); // 목록 다시 불러오기
+      const result = await withErrorHandling(
+        async () => await createSalaryStatement(dataToSubmit),
+        '급여 명세서 등록 완료',
+        '급여 명세서 등록 실패'
+      );
 
-      toast.add({
-        severity: 'success',
-        summary: '급여 명세서 등록 완료',
-        detail: '급여 명세서가 성공적으로 등록되었습니다.',
-        life: 3000
-      });
-
-    } catch (error: any) {
-      console.error('Failed to create salary statement:', error);
-      const errorMessage = error.response?.data?.detail || '제출에 실패했습니다. 입력값을 확인해주세요.';
-      submitError.value = errorMessage;
-      toast.add({
-        severity: 'error',
-        summary: '급여 명세서 등록 실패',
-        detail: errorMessage,
-        life: 5000
-      });
-    } finally {
-      isSubmitting.value = false;
-    }
+      if (result) {
+        // 성공 시: 폼 초기화 및 테이블 새로고침
+        Object.assign(newStatement, {
+          pay_month: null,
+          base_pay: 0,
+          bonus: 0,
+          deductions: 0,
+          net_pay: 0
+        });
+        await loadStatements();
+      }
+    });
   };
-  
+
   // (Helper) 숫자 포맷팅
   const formatCurrency = (value: number) => {
     return value.toLocaleString('ko-KR') + ' 원';

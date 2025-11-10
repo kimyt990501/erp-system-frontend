@@ -3,6 +3,10 @@
   import { getAllUsers } from '@/services/adminService';
   import type { User } from '@/types/user';
 
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useStatusMapping } from '@/composables/useStatusMapping';
+
   // PrimeVue 컴포넌트 임포트
   import Panel from 'primevue/panel';
   import DataTable from 'primevue/datatable';
@@ -11,9 +15,15 @@
   import InputText from 'primevue/inputtext';
   import Dropdown from 'primevue/dropdown';
 
+  // Custom Components
+  import StatusTag from '@/components/StatusTag.vue';
+
+  // Composables 초기화
+  const { isLoading, withLoading } = useLoading(true);
+  const { getUserStatusLabel, getUserStatusSeverity } = useStatusMapping();
+
   // 상태 정의
   const users = ref<User[]>([]);
-  const isLoading = ref(true);
 
   // 필터 설정
   const filters = ref({
@@ -37,14 +47,9 @@
 
   // 데이터 로드
   const loadUsers = async () => {
-    try {
-      isLoading.value = true;
+    await withLoading(async () => {
       users.value = await getAllUsers();
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    } finally {
-      isLoading.value = false;
-    }
+    });
   };
 
   // 마운트 시 데이터 로드
@@ -108,7 +113,7 @@
         </Column>
         <Column field="is_active" header="상태" :sortable="true" style="text-align: center; min-width: 100px;">
           <template #body="slotProps">
-            <Tag :value="slotProps.data.is_active ? '활성' : '비활성'" :severity="slotProps.data.is_active ? 'success' : 'danger'" />
+            <StatusTag type="user" :value="slotProps.data.is_active" />
           </template>
           <template #filter="{ filterModel, filterCallback }">
             <Dropdown

@@ -3,6 +3,11 @@
   import { getAllLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '@/services/adminService';
   import type { AdminLeaveRequest } from '@/types/leave';
 
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useToastNotification } from '@/composables/useToastNotification';
+  import { useStatusMapping } from '@/composables/useStatusMapping';
+
   // PrimeVue 컴포넌트 임포트
   import Panel from 'primevue/panel';
   import DataTable from 'primevue/datatable';
@@ -12,9 +17,16 @@
   import InputText from 'primevue/inputtext';
   import Dropdown from 'primevue/dropdown';
 
+  // Custom Components
+  import StatusTag from '@/components/StatusTag.vue';
+
+  // Composables 초기화
+  const { isLoading, withLoading } = useLoading(true);
+  const { withErrorHandling } = useToastNotification();
+  const { getLeaveLabel, getLeaveSeverity, getLeaveOptions } = useStatusMapping();
+
   // 상태 정의
   const requests = ref<AdminLeaveRequest[]>([]);
-  const isLoading = ref(true);
   const actionLoading = ref<number | null>(null);
 
   // 필터 설정
@@ -23,23 +35,14 @@
     status: { value: null, matchMode: 'equals' }
   });
 
-  // 상태 옵션
-  const statusOptions = [
-    { label: '대기', value: 'pending' },
-    { label: '승인', value: 'approved' },
-    { label: '거절', value: 'rejected' }
-  ];
+  // 상태 옵션 (composable에서 가져오기)
+  const statusOptions = getLeaveOptions();
 
   // 데이터 로드
   const loadRequests = async () => {
-    try {
-      isLoading.value = true;
+    await withLoading(async () => {
       requests.value = await getAllLeaveRequests();
-    } catch (error) {
-      console.error('Failed to fetch leave requests:', error);
-    } finally {
-      isLoading.value = false;
-    }
+    });
   };
 
   // 마운트 시 데이터 로드
@@ -47,13 +50,17 @@
 
   // 승인 처리
   const handleApprove = async (requestId: number) => {
+    actionLoading.value = requestId;
     try {
-      actionLoading.value = requestId;
-      await approveLeaveRequest(requestId);
-      await loadRequests(); // 목록 새로고침
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      alert('승인 처리에 실패했습니다.');
+      const result = await withErrorHandling(
+        async () => await approveLeaveRequest(requestId),
+        '연차 승인 완료',
+        '연차 승인 실패'
+      );
+
+      if (result) {
+        await loadRequests();
+      }
     } finally {
       actionLoading.value = null;
     }
@@ -61,34 +68,19 @@
 
   // 거절 처리
   const handleReject = async (requestId: number) => {
+    actionLoading.value = requestId;
     try {
-      actionLoading.value = requestId;
-      await rejectLeaveRequest(requestId);
-      await loadRequests(); // 목록 새로고침
-    } catch (error) {
-      console.error('Failed to reject request:', error);
-      alert('거절 처리에 실패했습니다.');
+      const result = await withErrorHandling(
+        async () => await rejectLeaveRequest(requestId),
+        '연차 거절 완료',
+        '연차 거절 실패'
+      );
+
+      if (result) {
+        await loadRequests();
+      }
     } finally {
       actionLoading.value = null;
-    }
-  };
-
-  // Helper 함수
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'approved': return '승인';
-      case 'pending': return '대기';
-      case 'rejected': return '거절';
-      default: return status;
-    }
-  };
-
-  const getStatusSeverity = (status: string) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'pending': return 'warning';
-      case 'rejected': return 'danger';
-      default: return 'info';
     }
   };
 
@@ -134,7 +126,7 @@
         <Column field="reason" header="사유" style="min-width: 150px;"></Column>
         <Column field="status" header="상태" :sortable="true" style="text-align: center; min-width: 100px;">
           <template #body="slotProps">
-            <Tag :value="getStatusLabel(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" />
+            <StatusTag type="leave" :value="slotProps.data.status" />
           </template>
           <template #filter="{ filterModel, filterCallback }">
             <Dropdown
@@ -173,7 +165,7 @@
                 @click="handleReject(slotProps.data.id)"
                 :loading="actionLoading === slotProps.data.id"
               />
-              <span v-else class="status-text">{{ getStatusLabel(slotProps.data.status) }}</span>
+              <span v-else class="status-text">{{ getLeaveLabel(slotProps.data.status) }}</span>
             </div>
           </template>
         </Column>

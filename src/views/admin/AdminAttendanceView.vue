@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { ref, onMounted, reactive } from 'vue';
-  import { useToast } from 'primevue/usetoast';
   import { format } from 'date-fns';
   import { FilterMatchMode } from '@primevue/core/api';
   import {
@@ -10,6 +9,12 @@
   import { getAllUsers } from '@/services/adminService';
   import type { AdminAttendanceRecord, AttendanceStatus } from '@/types/attendance';
   import type { User } from '@/types/user';
+
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useToastNotification } from '@/composables/useToastNotification';
+  import { useStatusMapping } from '@/composables/useStatusMapping';
+  import { useDateFiltering } from '@/composables/useDateFiltering';
 
   // PrimeVue 컴포넌트
   import Panel from 'primevue/panel';
@@ -23,19 +28,32 @@
   import Textarea from 'primevue/textarea';
   import InputMask from 'primevue/inputmask';
 
-  const toast = useToast();
+  // Custom Components
+  import StatusTag from '@/components/StatusTag.vue';
+  import StatCard from '@/components/StatCard.vue';
+
+  // Composables 초기화
+  const { isLoading, withLoading } = useLoading();
+  const { isLoading: isCreating, withLoading: withCreating } = useLoading();
+  const { showWarning, showError, withErrorHandling } = useToastNotification();
+  const { getAttendanceLabel, getAttendanceSeverity, getAttendanceOptions } = useStatusMapping();
+  const {
+    filterMode,
+    selectedDate: singleDate,
+    startDate,
+    endDate,
+    formattedDate,
+    formattedStartDate,
+    formattedEndDate,
+    setFilterMode,
+  } = useDateFiltering('single');
 
   // 상태
   const records = ref<AdminAttendanceRecord[]>([]);
   const users = ref<User[]>([]);
-  const isLoading = ref(false);
-  const isCreating = ref(false);
 
-  // 필터 타입
-  const filterType = ref<'single' | 'range'>('single');
-  const singleDate = ref<Date | undefined>(new Date());
-  const startDate = ref<Date | undefined>(undefined);
-  const endDate = ref<Date | undefined>(undefined);
+  // 필터 타입 (useDateFiltering의 filterMode와 동기화)
+  const filterType = filterMode;
 
   // 테이블 필터
   const filters = ref({
@@ -44,13 +62,8 @@
     status: { value: null, matchMode: FilterMatchMode.EQUALS }
   });
 
-  // 상태 옵션
-  const statusOptions = [
-    { label: '정상', value: 'present' },
-    { label: '지각', value: 'late' },
-    { label: '조퇴', value: 'early_leave' },
-    { label: '결근', value: 'absent' }
-  ];
+  // 상태 옵션 (composable에서 가져오기)
+  const statusOptions = getAttendanceOptions();
 
   // 새 기록 폼
   const newRecord = reactive<{
@@ -71,106 +84,68 @@
 
   // 사용자 목록 로드
   const loadUsers = async () => {
-    try {
-      users.value = await getAllUsers();
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      toast.add({
-        severity: 'error',
-        summary: '사용자 목록 로드 실패',
-        detail: '사용자 목록을 불러올 수 없습니다.',
-        life: 5000
-      });
-    }
+    await withErrorHandling(
+      async () => {
+        users.value = await getAllUsers();
+      },
+      undefined,
+      '사용자 목록 로드 실패',
+      { showSuccessToast: false }
+    );
   };
 
   // 근태 기록 로드
   const loadRecords = async () => {
-    try {
-      isLoading.value = true;
-
+    await withLoading(async () => {
       if (filterType.value === 'single' && singleDate.value) {
-        const workDate = format(singleDate.value, 'yyyy-MM-dd');
-        records.value = await getAllAttendanceRecords(workDate);
+        records.value = await getAllAttendanceRecords(formattedDate.value);
       } else if (filterType.value === 'range' && startDate.value && endDate.value) {
-        const start = format(startDate.value, 'yyyy-MM-dd');
-        const end = format(endDate.value, 'yyyy-MM-dd');
-        records.value = await getAllAttendanceRecords(undefined, start, end);
+        records.value = await getAllAttendanceRecords(undefined, formattedStartDate.value, formattedEndDate.value);
       } else {
-        toast.add({
-          severity: 'warn',
-          summary: '날짜 선택 필요',
-          detail: '조회할 날짜를 선택해주세요.',
-          life: 3000
-        });
+        showWarning('날짜 선택 필요', '조회할 날짜를 선택해주세요.');
         return;
       }
-    } catch (error) {
-      console.error('Failed to load records:', error);
-      toast.add({
-        severity: 'error',
-        summary: '기록 로드 실패',
-        detail: '근태 기록을 불러올 수 없습니다.',
-        life: 5000
-      });
-    } finally {
-      isLoading.value = false;
-    }
+    });
   };
 
   // 근태 기록 생성
   const handleCreate = async () => {
-    try {
-      isCreating.value = true;
-
-      if (!newRecord.user_id || !newRecord.work_date) {
-        toast.add({
-          severity: 'warn',
-          summary: '입력 확인',
-          detail: '필수 항목을 모두 입력해주세요.',
-          life: 3000
-        });
-        return;
-      }
-
-      await createAttendanceForUser(newRecord.user_id, {
-        work_date: format(newRecord.work_date, 'yyyy-MM-dd'),
-        check_in: newRecord.check_in,
-        check_out: newRecord.check_out || null,
-        status: newRecord.status,
-        notes: newRecord.notes || null
-      });
-
-      toast.add({
-        severity: 'success',
-        summary: '근태 기록 생성 완료',
-        detail: '근태 기록이 성공적으로 생성되었습니다.',
-        life: 3000
-      });
-
-      // 폼 초기화
-      Object.assign(newRecord, {
-        user_id: null,
-        work_date: null,
-        check_in: '',
-        check_out: '',
-        status: 'present',
-        notes: ''
-      });
-
-      // 기록 새로고침
-      await loadRecords();
-    } catch (error: any) {
-      console.error('Failed to create attendance:', error);
-      toast.add({
-        severity: 'error',
-        summary: '근태 기록 생성 실패',
-        detail: error.response?.data?.detail || '근태 기록 생성에 실패했습니다.',
-        life: 5000
-      });
-    } finally {
-      isCreating.value = false;
+    // 유효성 검사
+    if (!newRecord.user_id || !newRecord.work_date) {
+      showWarning('입력 확인', '필수 항목을 모두 입력해주세요.');
+      return;
     }
+
+    await withCreating(async () => {
+      const result = await withErrorHandling(
+        async () => {
+          return await createAttendanceForUser(newRecord.user_id!, {
+            work_date: format(newRecord.work_date!, 'yyyy-MM-dd'),
+            check_in: newRecord.check_in,
+            check_out: newRecord.check_out || null,
+            status: newRecord.status,
+            notes: newRecord.notes || null
+          });
+        },
+        '근태 기록 생성 완료',
+        '근태 기록 생성 실패'
+      );
+
+      if (result) {
+        // 폼 초기화
+        Object.assign(newRecord, {
+          user_id: null,
+          work_date: null,
+          check_in: '',
+          check_out: '',
+          status: 'present',
+          notes: ''
+        });
+
+        // 기록 새로고침
+        await loadRecords();
+      }
+    });
   };
 
   // 상태별 개수
@@ -178,32 +153,9 @@
     return records.value.filter(r => r.status === status).length;
   };
 
-  // 상태 라벨
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'present': return '정상';
-      case 'late': return '지각';
-      case 'early_leave': return '조퇴';
-      case 'absent': return '결근';
-      default: return status;
-    }
-  };
-
-  // 상태 색상
-  const getStatusSeverity = (status: string) => {
-    switch (status) {
-      case 'present': return 'success';
-      case 'late': return 'warning';
-      case 'early_leave': return 'warn';
-      case 'absent': return 'danger';
-      default: return 'info';
-    }
-  };
-
   // 컴포넌트 마운트
   onMounted(async () => {
-    await loadUsers();
-    await loadRecords();
+    await Promise.all([loadUsers(), loadRecords()]);
   });
 </script>
 
@@ -324,10 +276,7 @@
 
         <Column field="status" header="상태" :sortable="true" style="text-align: center; min-width: 100px;">
           <template #body="slotProps">
-            <Tag
-              :value="getStatusLabel(slotProps.data.status)"
-              :severity="getStatusSeverity(slotProps.data.status)"
-            />
+            <StatusTag type="attendance" :value="slotProps.data.status" />
           </template>
           <template #filter="{ filterModel, filterCallback }">
             <Dropdown

@@ -1,9 +1,13 @@
 <script setup lang="ts">
   import { ref, onMounted, reactive, computed, watch } from 'vue';
-  import { useToast } from 'primevue/usetoast';
   import { getMyLeaveBalance, getMyLeaveRequests, createLeaveRequest } from '@/services/leaveService';
   import type { LeaveBalance, LeaveRequest, LeaveRequestCreate } from '@/types/leave';
   import { format, differenceInCalendarDays } from 'date-fns';
+
+  // Composables
+  import { useLoading } from '@/composables/useLoading';
+  import { useToastNotification } from '@/composables/useToastNotification';
+  import { useStatusMapping } from '@/composables/useStatusMapping';
 
   // PrimeVue 컴포넌트 임포트
   import Panel from 'primevue/panel';
@@ -15,17 +19,24 @@
   import Textarea from 'primevue/textarea';
   import Button from 'primevue/button';
 
-  // Toast 사용
-  const toast = useToast();
+  // Custom Components
+  import StatusTag from '@/components/StatusTag.vue';
+  import MessageBox from '@/components/MessageBox.vue';
+  import FormGroup from '@/components/FormGroup.vue';
+
+  // Composables 초기화
+  const { isLoading: isLoadingBalance, withLoading: withLoadingBalance } = useLoading(true);
+  const { isLoading: isLoadingRequests, withLoading: withLoadingRequests } = useLoading(true);
+  const { isLoading: isSubmitting, withLoading: withSubmitting } = useLoading();
+  const { showSuccess, withErrorHandling } = useToastNotification();
+  const { getLeaveLabel, getLeaveSeverity } = useStatusMapping();
 
   // 연차 현황 (Balance) 상태
   const balance = ref<LeaveBalance | null>(null);
-  const isLoadingBalance = ref(true);
   const balanceError = ref(false);
 
   // 연차 신청 내역 (Requests) 상태
   const requests = ref<LeaveRequest[]>([]);
-  const isLoadingRequests = ref(true);
 
   // 연차 신청 폼 상태
   const newRequest = reactive<{ start_date: Date | null; end_date: Date | null; reason: string }>({
@@ -33,7 +44,6 @@
     end_date: null,
     reason: ''
   });
-  const isSubmitting = ref(false);
   const validationError = ref<string | null>(null);
 
   // 신청 일수 계산
@@ -69,42 +79,34 @@
 
   // 데이터 로드 함수
   const loadBalance = async () => {
-    try {
-      isLoadingBalance.value = true;
-      balance.value = await getMyLeaveBalance();
-    } catch (error) {
-      console.error('Failed to fetch leave balance:', error);
-      balanceError.value = true;
-    } finally {
-      isLoadingBalance.value = false;
-    }
+    await withLoadingBalance(async () => {
+      try {
+        balance.value = await getMyLeaveBalance();
+        balanceError.value = false;
+      } catch (error) {
+        console.error('Failed to fetch leave balance:', error);
+        balanceError.value = true;
+      }
+    });
   };
 
   const loadRequests = async () => {
-    try {
-      isLoadingRequests.value = true;
+    await withLoadingRequests(async () => {
       const result = await getMyLeaveRequests();
       requests.value = result || [];
-    } catch (error) {
-      console.error('Failed to fetch leave requests:', error);
-    } finally {
-      isLoadingRequests.value = false;
-    }
+    });
   };
 
   // 컴포넌트가 마운트(생성)될 때 API 호출
   onMounted(async () => {
-    await loadBalance();
-    await loadRequests();
+    await Promise.all([loadBalance(), loadRequests()]);
   });
 
   // 폼 제출 핸들러
   const handleSubmit = async () => {
     if (!canSubmit.value) return;
 
-    isSubmitting.value = true;
-
-    try {
+    await withSubmitting(async () => {
       const dataToSubmit: LeaveRequestCreate = {
         start_date: format(newRequest.start_date!, 'yyyy-MM-dd'),
         end_date: format(newRequest.end_date!, 'yyyy-MM-dd'),
@@ -112,55 +114,23 @@
         reason: newRequest.reason || null
       };
 
-      await createLeaveRequest(dataToSubmit);
+      const result = await withErrorHandling(
+        async () => await createLeaveRequest(dataToSubmit),
+        '연차 신청 완료',
+        '연차 신청 실패'
+      );
 
-      // 성공 시: 폼 초기화 및 데이터 새로고침
-      Object.assign(newRequest, {
-        start_date: null,
-        end_date: null,
-        reason: ''
-      });
+      if (result) {
+        // 성공 시: 폼 초기화 및 데이터 새로고침
+        Object.assign(newRequest, {
+          start_date: null,
+          end_date: null,
+          reason: ''
+        });
 
-      await loadBalance();
-      await loadRequests();
-
-      toast.add({
-        severity: 'success',
-        summary: '연차 신청 완료',
-        detail: '연차 신청이 성공적으로 제출되었습니다.',
-        life: 3000
-      });
-    } catch (error: any) {
-      console.error('Failed to create leave request:', error);
-      const errorMessage = error.response?.data?.detail || '연차 신청에 실패했습니다.';
-      toast.add({
-        severity: 'error',
-        summary: '연차 신청 실패',
-        detail: errorMessage,
-        life: 5000
-      });
-    } finally {
-      isSubmitting.value = false;
-    }
-  };
-
-  // (Helper) 상태(status)에 따라 Tag 컴포넌트 색상 변경
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'approved': return '승인';
-      case 'pending': return '대기';
-      case 'rejected': return '거절';
-      default: return status;
-    }
-  };
-
-  const getStatusSeverity = (status: string) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'pending': return 'warning';
-      case 'rejected': return 'danger';
-      default: return 'info';
-    }
+        await Promise.all([loadBalance(), loadRequests()]);
+      }
+    });
   };
 </script>
 
@@ -237,15 +207,11 @@
             />
           </div>
 
-          <div v-if="calculatedDays > 0" class="info-message">
-            <i class="pi pi-info-circle"></i>
-            <span>신청 일수: <strong>{{ calculatedDays }}일</strong></span>
-          </div>
+          <MessageBox v-if="calculatedDays > 0" severity="info">
+            신청 일수: <strong>{{ calculatedDays }}일</strong>
+          </MessageBox>
 
-          <div v-if="validationError" class="validation-error">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span>{{ validationError }}</span>
-          </div>
+          <MessageBox v-if="validationError" severity="warn" :message="validationError" />
 
           <Button
             type="submit"
@@ -277,7 +243,7 @@
         <Column field="reason" header="사유"></Column>
         <Column field="status" header="상태" :sortable="true" style="text-align: center;">
           <template #body="slotProps">
-            <Tag :value="getStatusLabel(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" />
+            <StatusTag type="leave" :value="slotProps.data.status" />
           </template>
         </Column>
       </DataTable>
