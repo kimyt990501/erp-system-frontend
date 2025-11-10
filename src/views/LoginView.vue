@@ -97,7 +97,7 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #666666ff 0%, #1a1a20ff 100%);
   }
   
   /* (추가) 4. 로고와 제목을 담는 헤더 스타일 */
