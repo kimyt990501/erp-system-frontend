@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { format } from 'date-fns'
 import {
   getTodayAttendance,
@@ -45,8 +45,9 @@ const {
   formattedEndDate,
 } = useDateFiltering('range')
 
-// 오늘 날짜
-const today = new Date()
+// 오늘 날짜 (reactive)
+const today = ref(new Date())
+const currentDateString = ref(format(new Date(), 'yyyy-MM-dd'))
 
 // 오늘 근태 상태
 const todayRecord = ref<AttendanceRecord | null>(null)
@@ -72,7 +73,16 @@ const getCurrentTime = () => {
 // 오늘 근태 로드
 const loadTodayAttendance = async () => {
   await withLoadingToday(async () => {
-    todayRecord.value = await getTodayAttendance()
+    // 백엔드 /attendance/today API가 신뢰할 수 없으므로
+    // my-records에서 오늘 날짜로 필터링해서 가져옴
+    const todayString = format(new Date(), 'yyyy-MM-dd')
+    const records = await getMyAttendanceRecords(todayString, todayString)
+
+    // 첫 번째 레코드가 오늘 것이면 사용, 아니면 null
+    const firstRecord = records[0]
+    todayRecord.value = firstRecord && firstRecord.work_date === todayString
+      ? firstRecord
+      : null
   })
 }
 
@@ -90,10 +100,25 @@ const loadRecords = async () => {
   })
 }
 
+// 날짜 변경 확인 및 새로고침
+const checkDateChange = async () => {
+  const newDateString = format(new Date(), 'yyyy-MM-dd')
+
+  // 날짜가 바뀌었으면 데이터 새로고침
+  if (newDateString !== currentDateString.value) {
+    console.log('날짜 변경 감지:', currentDateString.value, '->', newDateString)
+    currentDateString.value = newDateString
+    today.value = new Date()
+
+    // 오늘 근태 기록 새로고침
+    await loadTodayAttendance()
+  }
+}
+
 // 출근 체크인
 const handleCheckIn = async () => {
   await withCheckingIn(async () => {
-    const workDate = format(today, 'yyyy-MM-dd')
+    const workDate = format(today.value, 'yyyy-MM-dd')
     const checkInTime = getCurrentTime()
 
     const result = await withErrorHandling(
@@ -121,7 +146,7 @@ const handleCheckIn = async () => {
 // 퇴근 체크아웃
 const handleCheckOut = async () => {
   await withCheckingOut(async () => {
-    const workDate = format(today, 'yyyy-MM-dd')
+    const workDate = format(today.value, 'yyyy-MM-dd')
     const checkOutTime = getCurrentTime()
 
     const result = await withErrorHandling(
@@ -145,9 +170,34 @@ const handleCheckOut = async () => {
   })
 }
 
+// 주기적으로 날짜 변경 확인 (1분마다)
+let dateCheckInterval: number | null = null
+
+// 페이지 포커스 이벤트 핸들러
+const handleVisibilityChange = () => {
+  if (!document.hidden) {
+    // 페이지가 다시 보일 때 날짜 확인
+    checkDateChange()
+  }
+}
+
 // 컴포넌트 마운트 시 데이터 로드
 onMounted(async () => {
   await Promise.all([loadTodayAttendance(), loadStats(), loadRecords()])
+
+  // 1분마다 날짜 변경 확인
+  dateCheckInterval = window.setInterval(checkDateChange, 60000)
+
+  // 페이지 가시성 변경 이벤트 리스너 추가
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+// 컴포넌트 언마운트 시 정리
+onUnmounted(() => {
+  if (dateCheckInterval !== null) {
+    clearInterval(dateCheckInterval)
+  }
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 

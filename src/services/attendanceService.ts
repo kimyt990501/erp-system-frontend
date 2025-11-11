@@ -40,7 +40,18 @@ export const checkOut = async (workDate: string, data: CheckOutRequest): Promise
 export const getTodayAttendance = async (): Promise<AttendanceRecord | null> => {
   try {
     const response = await api.get<AttendanceRecord>('/attendance/today');
-    return response.data;
+    const record = response.data;
+
+    // 백엔드에서 받은 데이터가 정말 오늘 날짜인지 확인
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    if (record && record.work_date !== todayString) {
+      console.warn('백엔드에서 오늘이 아닌 날짜의 데이터를 반환했습니다:', record.work_date, '!==', todayString);
+      return null;
+    }
+
+    return record;
   } catch (error: any) {
     // 404인 경우 오늘 기록이 없는 것이므로 null 반환
     if (error.response?.status === 404) {
