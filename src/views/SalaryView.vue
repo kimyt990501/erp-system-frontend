@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, watch } from 'vue'
-import { getMySalaryStatements, createSalaryStatement } from '@/services/salaryService'
+import { getMySalaryStatements, createSalaryStatement, uploadSalaryPdf } from '@/services/salaryService'
 import type { SalaryStatement, SalaryStatementCreate } from '@/types/salary'
 import { format } from 'date-fns'
 
@@ -16,6 +16,8 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Calendar from 'primevue/calendar'
 import Message from 'primevue/message'
+import FileUpload from 'primevue/fileupload'
+import Divider from 'primevue/divider'
 
 // Custom Components
 import FormGroup from '@/components/FormGroup.vue'
@@ -23,7 +25,8 @@ import FormGroup from '@/components/FormGroup.vue'
 // Composables 초기화
 const { isLoading, withLoading } = useLoading(true)
 const { isLoading: isSubmitting, withLoading: withSubmitting } = useLoading()
-const { showWarning, withErrorHandling } = useToastNotification()
+const { isLoading: isUploading, withLoading: withUploading } = useLoading()
+const { showWarning, showSuccess, showError, withErrorHandling } = useToastNotification()
 
 // --- 테이블(목록) 관련 상태 ---
 const statements = ref<SalaryStatement[]>([])
@@ -106,6 +109,90 @@ const handleSubmit = async () => {
   })
 }
 
+// PDF 업로드 관련 상태
+const selectedFile = ref<File | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+// PDF 파일 선택 핸들러
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (!file) return
+
+  // PDF 파일 검증
+  if (file.type !== 'application/pdf') {
+    showError('파일 형식 오류', 'PDF 파일만 업로드 가능합니다.')
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+    return
+  }
+
+  selectedFile.value = file
+}
+
+// PDF 업로드 핸들러
+const handlePdfUpload = async () => {
+  if (!selectedFile.value) {
+    showWarning('파일 선택', 'PDF 파일을 선택해주세요.')
+    return
+  }
+
+  await withUploading(async () => {
+    try {
+      const result = await uploadSalaryPdf(selectedFile.value!)
+
+      showSuccess('업로드 완료', result.message)
+
+      // 파일 입력 초기화
+      selectedFile.value = null
+      if (fileInputRef.value) {
+        fileInputRef.value.value = ''
+      }
+
+      // 목록 새로고침
+      await loadStatements()
+    } catch (error: any) {
+      // 백엔드 에러 메시지 추출
+      let errorMessage = '급여명세서 업로드에 실패했습니다.'
+
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail
+
+        // 백엔드 에러 메시지를 사용자 친화적으로 변환
+        if (typeof detail === 'string') {
+          if (detail.includes('PDF 파일만')) {
+            errorMessage = 'PDF 파일만 업로드 가능합니다.'
+          } else if (detail.includes('이미 등록')) {
+            errorMessage = detail // 백엔드에서 이미 한글로 제공
+          } else if (detail.includes('추출 실패')) {
+            errorMessage = 'PDF에서 급여 정보를 읽을 수 없습니다. 파일을 확인해주세요.'
+          } else {
+            errorMessage = detail
+          }
+        }
+      }
+
+      showError('업로드 실패', errorMessage)
+
+      // 파일 입력 초기화
+      selectedFile.value = null
+      if (fileInputRef.value) {
+        fileInputRef.value.value = ''
+      }
+    }
+  })
+}
+
+// 파일 선택 취소
+const handleClearFile = () => {
+  selectedFile.value = null
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
 // (Helper) 숫자 포맷팅
 const formatCurrency = (value: number) => {
   return value.toLocaleString('ko-KR') + ' 원'
@@ -115,6 +202,57 @@ const formatCurrency = (value: number) => {
 <template>
   <div class="salary-management">
     <Panel header="급여 명세서 입력" class="salary-form-panel">
+      <!-- PDF 업로드 섹션 -->
+      <div class="pdf-upload-section">
+        <h3 class="section-title">
+          <i class="pi pi-file-pdf"></i>
+          PDF 업로드
+        </h3>
+        <div class="upload-area">
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".pdf"
+            @change="handleFileSelect"
+            class="file-input"
+            id="pdf-file-input"
+          />
+          <label for="pdf-file-input" class="file-label">
+            <i class="pi pi-cloud-upload"></i>
+            <span v-if="!selectedFile">PDF 파일 선택</span>
+            <span v-else class="file-name">{{ selectedFile.name }}</span>
+          </label>
+
+          <div v-if="selectedFile" class="file-actions">
+            <Button
+              label="업로드"
+              icon="pi pi-upload"
+              @click="handlePdfUpload"
+              :loading="isUploading"
+              class="p-button-success"
+            />
+            <Button
+              label="취소"
+              icon="pi pi-times"
+              @click="handleClearFile"
+              :disabled="isUploading"
+              class="p-button-secondary"
+            />
+          </div>
+        </div>
+        <p class="upload-hint">
+          <i class="pi pi-info-circle"></i>
+          PDF에서 급여 정보를 자동으로 추출하여 등록합니다.
+        </p>
+      </div>
+
+      <Divider />
+
+      <!-- 수동 입력 폼 -->
+      <h3 class="section-title">
+        <i class="pi pi-pencil"></i>
+        직접 입력
+      </h3>
       <form @submit.prevent="handleSubmit" class="salary-form">
         <div class="form-group">
           <label for="pay_month">지급 연월</label>
@@ -227,7 +365,93 @@ const formatCurrency = (value: number) => {
 
 /* 왼쪽 입력 폼 */
 .salary-form-panel {
-  flex: 0 0 400px; /* 400px 고정 너비 */
+  flex: 0 0 450px; /* 450px 고정 너비 (PDF 업로드 공간 포함) */
+}
+
+/* 섹션 제목 */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64ffda;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  margin-top: 0;
+}
+
+/* PDF 업로드 섹션 */
+.pdf-upload-section {
+  margin-bottom: 20px;
+}
+
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1d29 0%, #242938 100%);
+  border: 2px dashed #2d3348;
+  border-radius: 8px;
+  color: #a8b2d1;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-label:hover {
+  border-color: #64ffda;
+  background: linear-gradient(135deg, #242938 0%, #2d3348 100%);
+  color: #64ffda;
+}
+
+.file-label i {
+  font-size: 1.5rem;
+}
+
+.file-name {
+  color: #64ffda;
+  font-weight: 600;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.file-actions :deep(.p-button) {
+  flex: 1;
+}
+
+.upload-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #a8b2d1;
+  margin: 8px 0 0 0;
+  padding: 8px;
+  background-color: rgba(100, 255, 218, 0.05);
+  border-radius: 4px;
+}
+
+.upload-hint i {
+  color: #64ffda;
 }
 
 /* 오른쪽 목록 테이블 */
@@ -250,12 +474,25 @@ const formatCurrency = (value: number) => {
     flex: 1 1 100%;
     width: 100%;
   }
+
+  .file-label {
+    padding: 15px;
+    font-size: 0.9rem;
+  }
+
+  .file-actions {
+    flex-direction: column;
+  }
+
+  .file-actions :deep(.p-button) {
+    width: 100%;
+  }
 }
 
 /* 태블릿: 좁은 화면 대응 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .salary-form-panel {
-    flex: 0 0 320px; /* 너비 줄임 */
+    flex: 0 0 380px; /* 너비 줄임 */
   }
 }
 

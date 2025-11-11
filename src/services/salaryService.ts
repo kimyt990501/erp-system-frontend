@@ -40,3 +40,25 @@ export const createSalaryStatement = async (
   const response = await api.post<SalaryStatement>('/salary', newData);
   return response.data;
 };
+
+/**
+ * PDF 파일을 업로드하여 급여 명세서를 자동 등록합니다 (POST /salary/upload-pdf)
+ */
+export const uploadSalaryPdf = async (file: File): Promise<{
+  message: string;
+  salary_statement: SalaryStatement;
+}> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post<{
+    message: string;
+    salary_statement: SalaryStatement;
+  }>('/salary/upload-pdf', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+};
