@@ -361,7 +361,7 @@ onUnmounted(() => {
 .attendance-management {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .today-panel {
@@ -371,7 +371,7 @@ onUnmounted(() => {
 .bottom-section {
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: 24px;
 }
 
 .stats-panel {
@@ -382,7 +382,7 @@ onUnmounted(() => {
   flex: 1;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .bottom-section {
     flex-direction: column;
   }
@@ -397,7 +397,7 @@ onUnmounted(() => {
 .today-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .today-date {
@@ -406,7 +406,7 @@ onUnmounted(() => {
   gap: 10px;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #64ffda;
+  color: var(--primary-color);
   margin-top: 10px;
 }
 
@@ -418,10 +418,10 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 20px;
-  background-color: #1a1d29;
-  border-radius: 8px;
-  border: 1px solid #2d3348;
+  padding: 24px;
+  background-color: var(--surface-0);
+  border-radius: 12px;
+  border: 1px solid var(--surface-100);
 }
 
 .status-item {
@@ -432,49 +432,53 @@ onUnmounted(() => {
 }
 
 .status-item strong {
-  color: #a8b2d1;
+  color: var(--text-color-secondary);
   font-size: 0.9rem;
 }
 
 .status-item .time {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 700;
+  color: var(--text-color);
 }
 
 .time.recorded {
-  color: #64ffda;
+  color: var(--primary-500);
 }
 
 .time.not-recorded {
-  color: #6c757d;
+  color: var(--text-color-secondary);
+  opacity: 0.5;
 }
 
 .status-divider {
-  width: 2px;
+  width: 1px;
   height: 60px;
-  background-color: #2d3348;
+  background-color: var(--surface-200);
 }
 
 .action-buttons {
   display: flex;
-  gap: 15px;
+  gap: 16px;
   justify-content: center;
 }
 
 .action-buttons :deep(.p-button) {
   flex: 1;
-  max-width: 200px;
+  max-width: 240px;
+  height: 48px;
+  font-weight: 600;
 }
 
 .notes-section {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background-color: rgba(100, 255, 218, 0.1);
-  border-left: 3px solid #64ffda;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--surface-0);
+  border-left: 4px solid var(--primary-500);
   border-radius: 4px;
-  color: #a8b2d1;
+  color: var(--text-color);
 }
 
 /* 통계 */
@@ -483,53 +487,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   padding-top: 12px;
-}
-
-.stat-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background-color: #1a1d29;
-  border-radius: 6px;
-  border: 1px solid #2d3348;
-}
-
-.stat-item.highlight {
-  background-color: rgba(100, 255, 218, 0.1);
-  border-color: #64ffda;
-}
-
-.stat-label {
-  color: #a8b2d1;
-  font-size: 0.95rem;
-}
-
-.stat-value {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #e1e4e8;
-}
-
-.stat-value.present {
-  color: #52c41a;
-}
-
-.stat-value.late {
-  color: #faad14;
-}
-
-.stat-value.early-leave {
-  color: #ff7a45;
-}
-
-.stat-value.absent {
-  color: #f5222d;
-}
-
-.stat-item.highlight .stat-value {
-  color: #64ffda;
-  font-size: 1.3rem;
 }
 
 /* 기록 패널 헤더 */
@@ -568,85 +525,52 @@ onUnmounted(() => {
   }
 }
 
-/* 다크 테마 스타일 (기존 패턴 적용) */
+/* PrimeVue Overrides for Dark Theme Consistency */
 :deep(.p-panel) {
-  background-color: #242938;
-  border: 1px solid #2d3348;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  color: #e1e4e8;
+  background-color: var(--surface-card);
+  border: 1px solid var(--surface-100);
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 :deep(.p-panel .p-panel-header) {
-  background-color: #2d3348;
-  border-bottom: 1px solid #64ffda;
-  color: #a8b2d1;
+  background-color: transparent;
+  border-bottom: 1px solid var(--surface-100);
+  padding: 1.25rem;
 }
 
 :deep(.p-panel .p-panel-content) {
-  background-color: #242938;
-  color: #e1e4e8;
+  background-color: transparent;
+  padding: 1.25rem;
 }
 
 :deep(.p-datatable) {
-  background-color: #242938;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  border: 1px solid #2d3348;
+  background-color: var(--surface-card);
 }
 
-:deep(.p-datatable-thead > tr > th) {
-  background: linear-gradient(180deg, #2d3348 0%, #242938 100%);
+:deep(.p-datatable .p-datatable-thead > tr > th) {
+  background-color: var(--surface-0);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--surface-200);
   font-weight: 600;
-  color: #a8b2d1;
-  border-bottom: 2px solid #64ffda;
-  padding: 12px 16px;
 }
 
-:deep(.p-datatable-striped .p-datatable-tbody > tr:nth-child(even)) {
-  background-color: #1f2230;
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  background-color: var(--surface-card);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--surface-100);
 }
 
-:deep(.p-datatable-tbody > tr) {
-  background-color: #242938;
-  border-bottom: 1px solid #2d3348;
-  color: #e1e4e8;
+:deep(.p-datatable.p-datatable-striped .p-datatable-tbody > tr:nth-child(even)) {
+  background-color: var(--surface-0);
 }
 
-:deep(.p-datatable-tbody > tr:hover) {
-  background-color: rgba(100, 255, 218, 0.1) !important;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-:deep(.p-datatable-tbody > tr > td) {
-  color: #e1e4e8;
+:deep(.p-datatable .p-datatable-tbody > tr:hover) {
+  background-color: var(--surface-50) !important;
 }
 
 :deep(.p-skeleton) {
-  background-color: #2d3348;
-}
-
-:deep(.p-skeleton::after) {
-  background: linear-gradient(90deg, transparent, rgba(100, 255, 218, 0.1), transparent);
-}
-
-:deep(.p-calendar-input),
-:deep(.p-inputtext) {
-  background-color: #1a1d29;
-  border: 1px solid #2d3348;
-  color: #e1e4e8;
-}
-
-:deep(.p-calendar-input:enabled:hover),
-:deep(.p-inputtext:enabled:hover) {
-  border-color: #64ffda;
-}
-
-:deep(.p-calendar-input:enabled:focus),
-:deep(.p-inputtext:enabled:focus) {
-  border-color: #64ffda;
-  box-shadow: 0 0 0 0.2rem rgba(100, 255, 218, 0.2);
+  background-color: var(--surface-200);
 }
 
 .loading-state {

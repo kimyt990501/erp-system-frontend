@@ -88,108 +88,103 @@
 <template>
   <div class="dashboard-grid">
     <!-- 근태 카드 -->
-    <Card class="info-card">
-      <template #title>
+    <div class="erp-card">
+      <div class="card-header">
         <div class="card-title">
-          <i class="pi pi-clock"></i>
+          <div class="icon-wrapper attendance-icon">
+            <i class="pi pi-clock"></i>
+          </div>
           <span>오늘의 근태</span>
         </div>
-      </template>
-      <template #content>
-        <div v-if="isLoadingAttendance" class="attendance-content">
+        <Button icon="pi pi-arrow-right" text rounded @click="goTo('/attendance')" />
+      </div>
+      
+      <div class="card-body">
+        <div v-if="isLoadingAttendance" class="loading-state">
           <Skeleton height="2rem" class="mb-2"></Skeleton>
           <Skeleton height="2rem" class="mb-2"></Skeleton>
-          <Skeleton height="1.5rem" width="60%" class="mx-auto"></Skeleton>
         </div>
         <div v-else class="attendance-content">
-          <div class="attendance-time-row">
-            <span class="time-label">출근</span>
-            <span :class="['time-value', todayAttendance?.check_in ? 'recorded' : 'not-recorded']">
+          <div class="time-row">
+            <span class="label">출근</span>
+            <span :class="['value', todayAttendance?.check_in ? 'recorded' : '']">
               {{ todayAttendance?.check_in || '--:--' }}
             </span>
           </div>
-          <div class="attendance-time-row">
-            <span class="time-label">퇴근</span>
-            <span :class="['time-value', todayAttendance?.check_out ? 'recorded' : 'not-recorded']">
+          <div class="time-row">
+            <span class="label">퇴근</span>
+            <span :class="['value', todayAttendance?.check_out ? 'recorded' : '']">
               {{ todayAttendance?.check_out || '--:--' }}
             </span>
           </div>
-          <div v-if="monthlyStats" class="attendance-stats">
-            <small>이번 달 출석률: <strong>{{ monthlyStats.attendance_rate.toFixed(1) }}%</strong></small>
+          
+          <div v-if="monthlyStats" class="stats-footer">
+            <div class="stat-pill">
+              <span>이번 달 출석률</span>
+              <strong>{{ monthlyStats.attendance_rate.toFixed(1) }}%</strong>
+            </div>
           </div>
         </div>
-      </template>
-      <template #footer>
-        <Button
-          label="근태 관리"
-          icon="pi pi-arrow-right"
-          class="p-button-outlined"
-          @click="goTo('/attendance')"
-        />
-      </template>
-    </Card>
+      </div>
+    </div>
 
     <!-- 연차 카드 -->
-    <Card class="info-card">
-      <template #title>
+    <div class="erp-card">
+      <div class="card-header">
         <div class="card-title">
-          <i class="pi pi-calendar"></i>
+          <div class="icon-wrapper leave-icon">
+            <i class="pi pi-calendar"></i>
+          </div>
           <span>내 연차 현황</span>
         </div>
-      </template>
-      <template #content>
-        <div v-if="isLoadingBalance" class="balance-content">
-          <Skeleton height="3rem" class="mb-3"></Skeleton>
-          <Skeleton height="1.5rem" width="60%" class="mx-auto mb-2"></Skeleton>
-          <Skeleton height="1rem" width="80%" class="mx-auto"></Skeleton>
+        <Button icon="pi pi-arrow-right" text rounded @click="goTo('/leave')" />
+      </div>
+      
+      <div class="card-body center-content">
+        <div v-if="isLoadingBalance" class="loading-state">
+          <Skeleton height="3rem" class="mb-2"></Skeleton>
+          <Skeleton height="1rem" width="60%"></Skeleton>
         </div>
         <div v-else-if="balance" class="balance-content">
-          <div class="balance-days">{{ balance.remaining_days }}</div>
-          <div class="balance-unit">일 남음</div>
-          <small>(총 {{ balance.total_granted }}일 중 {{ balance.total_used }}일 사용)</small>
+          <div class="big-number">{{ balance.remaining_days }}<span class="unit">일</span></div>
+          <div class="sub-text">남음</div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" :style="{ width: (balance.total_used / balance.total_granted * 100) + '%' }"></div>
+          </div>
+          <small class="detail-text">총 {{ balance.total_granted }}일 중 {{ balance.total_used }}일 사용</small>
         </div>
-        <div v-else class="error-text">연차 정보를 불러오지 못했습니다.</div>
-      </template>
-      <template #footer>
-        <Button
-          label="연차 신청/내역 보기"
-          icon="pi pi-arrow-right"
-          class="p-button-outlined"
-          @click="goTo('/leave')"
-        />
-      </template>
-    </Card>
+        <div v-else class="error-text">정보 없음</div>
+      </div>
+    </div>
 
     <!-- 급여 카드 -->
-    <Card class="info-card">
-      <template #title>
+    <div class="erp-card">
+      <div class="card-header">
         <div class="card-title">
-          <i class="pi pi-wallet"></i>
-          <span>최근 급여 명세서</span>
+          <div class="icon-wrapper salary-icon">
+            <i class="pi pi-wallet"></i>
+          </div>
+          <span>최근 급여</span>
         </div>
-      </template>
-      <template #content>
-        <div v-if="isLoadingSalary" class="salary-content">
-          <Skeleton height="1.5rem" width="50%" class="mx-auto mb-2"></Skeleton>
-          <Skeleton height="3rem" class="mb-3"></Skeleton>
-          <Skeleton height="1rem" width="60%" class="mx-auto"></Skeleton>
+        <Button icon="pi pi-arrow-right" text rounded @click="goTo('/salary')" />
+      </div>
+      
+      <div class="card-body center-content">
+        <div v-if="isLoadingSalary" class="loading-state">
+          <Skeleton height="1rem" width="40%" class="mb-2"></Skeleton>
+          <Skeleton height="2.5rem"></Skeleton>
         </div>
         <div v-else-if="latestSalary" class="salary-content">
-          <div class="salary-month">{{ latestSalary.pay_month }} 지급</div>
-          <div class="salary-netpay">{{ formatCurrency(latestSalary.net_pay) }}</div>
-          <small>(기본급 {{ formatCurrency(latestSalary.base_pay) }})</small>
+          <div class="month-badge">{{ latestSalary.pay_month }} 지급분</div>
+          <div class="salary-amount">{{ formatCurrency(latestSalary.net_pay) }}</div>
+          <div class="salary-detail">
+            <span>기본급</span>
+            <span>{{ formatCurrency(latestSalary.base_pay) }}</span>
+          </div>
         </div>
-        <div v-else class="info-text">입력된 급여 내역이 없습니다.</div>
-      </template>
-      <template #footer>
-        <Button
-          label="급여 입력/내역 보기"
-          icon="pi pi-arrow-right"
-          class="p-button-outlined"
-          @click="goTo('/salary')"
-        />
-      </template>
-    </Card>
+        <div v-else class="info-text">내역 없음</div>
+      </div>
+    </div>
 
     </div>
 </template>
@@ -197,159 +192,199 @@
 <style scoped>
   .dashboard-grid {
     display: grid;
-    /* 반응형: 최소 300px, 자동으로 열 개수 조정 */
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
   }
 
-  /* 모바일: 1열 레이아웃 */
-  @media (max-width: 640px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-  }
-
-  /* 태블릿: 2열 레이아웃 */
-  @media (min-width: 641px) and (max-width: 1024px) {
-    .dashboard-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
-  .info-card {
-    /* 카드가 그리드 셀을 꽉 채우도록 */
-    height: 100%;
-  }
-  
-  .card-title {
+  /* ERP Card Style */
+  .erp-card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--surface-100);
+    border-radius: 12px;
+    padding: 20px;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.25rem;
-  }
-  
-  :deep(.p-card-content) {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-  
-  .balance-content, .salary-content {
-    text-align: center;
-    padding: 10px 0;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
 
-  .attendance-content {
-    padding: 10px 0;
+  .erp-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-500);
   }
 
-  .attendance-time-row {
+  .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
-    margin-bottom: 8px;
-    background-color: #1a1d29;
-    border-radius: 6px;
-    border: 1px solid #2d3348;
+    margin-bottom: 20px;
   }
 
-  .time-label {
-    color: #a8b2d1;
-    font-weight: 500;
-  }
-
-  .time-value {
-    font-size: 1.3rem;
-    font-weight: 700;
-  }
-
-  .time-value.recorded {
-    color: #64ffda;
-  }
-
-  .time-value.not-recorded {
-    color: #6c757d;
-  }
-
-  .attendance-stats {
-    text-align: center;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #2d3348;
-  }
-
-  .attendance-stats strong {
-    color: #64ffda;
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-size: 1.1rem;
-  }
-
-  .balance-days, .salary-netpay {
-    font-size: 2.5rem;
     font-weight: 600;
-    color: #64ffda;
-    margin: 10px 0;
-    text-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
+    color: var(--text-color);
   }
-  
-  .salary-month {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--p-text-color-secondary);
+
+  .icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  
-  .info-text, .error-text {
+
+  .icon-wrapper i {
+    font-size: 1.2rem;
+  }
+
+  .attendance-icon {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  .leave-icon {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+  }
+
+  .salary-icon {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+
+  .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .center-content {
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 20px;
-    color: var(--p-text-color-secondary);
-  }
-  
-  :deep(.p-card-footer) {
-    text-align: center;
-  }
-  :deep(.p-button-outlined) {
-    width: 90%;
   }
 
-  /* 카드 다크 테마 */
-  :deep(.p-card) {
-    background-color: #242938;
-    border: 1px solid #2d3348;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    color: #e1e4e8;
+  /* Attendance Styles */
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--surface-0);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid var(--surface-100);
   }
 
-  :deep(.p-card .p-card-title) {
-    color: #a8b2d1;
+  .time-row .label {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
   }
 
-  :deep(.p-card .p-card-content) {
-    color: #e1e4e8;
+  .time-row .value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-color-secondary);
   }
 
-  :deep(.p-card .p-card-footer) {
-    border-top: 1px solid #2d3348;
+  .time-row .value.recorded {
+    color: var(--primary-500);
   }
 
-  /* Skeleton 다크 테마 */
-  :deep(.p-skeleton) {
-    background-color: #2d3348;
+  .stats-footer {
+    margin-top: auto;
+    padding-top: 12px;
   }
 
-  :deep(.p-skeleton::after) {
-    background: linear-gradient(90deg, transparent, rgba(100, 255, 218, 0.1), transparent);
+  .stat-pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--surface-0);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
   }
 
-  .mb-2 {
-    margin-bottom: 0.5rem;
+  .stat-pill strong {
+    color: var(--primary-500);
   }
 
-  .mb-3 {
-    margin-bottom: 1rem;
+  /* Leave Balance Styles */
+  .big-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1;
   }
 
-  .mx-auto {
-    margin-left: auto;
-    margin-right: auto;
+  .unit {
+    font-size: 1.2rem;
+    margin-left: 4px;
+    color: var(--text-color-secondary);
   }
+
+  .sub-text {
+    color: var(--text-color-secondary);
+    margin-bottom: 16px;
+  }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background-color: var(--surface-100);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background-color: var(--primary-500);
+    border-radius: 4px;
+  }
+
+  .detail-text {
+    color: var(--text-color-secondary);
+  }
+
+  /* Salary Styles */
+  .month-badge {
+    background-color: var(--surface-100);
+    color: var(--text-color-secondary);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+
+  .salary-amount {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 16px;
+  }
+
+  .salary-detail {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px;
+    background-color: var(--surface-0);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+  }
+
+  .loading-state {
+    width: 100%;
+  }
+
+  .mb-2 { margin-bottom: 0.5rem; }
 </style>

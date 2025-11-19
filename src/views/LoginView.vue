@@ -4,11 +4,9 @@
   import { useToast } from 'primevue/usetoast';
   import { useAuthStore } from '@/stores/auth';
 
-  // (중요!) 컴포넌트 임포트 확인
   import Button from 'primevue/button';
   import InputText from 'primevue/inputtext';
   import Password from 'primevue/password';
-  import Panel from 'primevue/panel';
   import Message from 'primevue/message';
 
   // Toast 사용
@@ -17,7 +15,6 @@
   const authStore = useAuthStore();
   const router = useRouter();
   
-  // (중요!) ref 변수 선언 확인
   const email = ref('');
   const password = ref('');
   
@@ -29,12 +26,6 @@
   
     isLoading.value = true;
     errorMessage.value = '';
-  
-    // (디버깅) 이 시점에서 email.value와 password.value가 비어있는 것입니다.
-    console.log('로그인 시도 데이터:', { 
-      email: email.value, 
-      password: password.value 
-    });
   
     try {
       await authStore.login(email.value, password.value);
@@ -62,91 +53,200 @@
 </script>
 
 <template>
-  <div class="login-page-wrapper">
-    
-    <div class="login-header">
-      <i class="pi pi-shield login-icon"></i>
-      <h2>ERP System</h2>
-    </div>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-circle">
+          <i class="pi pi-box"></i>
+        </div>
+        <h2>ERP System</h2>
+        <p class="subtitle">업무 효율을 위한 통합 관리 시스템</p>
+      </div>
 
-    <Panel header="로그인" class="login-panel">
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
-          <label for="email">이메일:</label>
-          <InputText id="email" type="email" v-model="email" required />
+          <label for="email">이메일</label>
+          <span class="p-input-icon-left">
+            <i class="pi pi-envelope" />
+            <InputText id="email" type="email" v-model="email" placeholder="admin@example.com" required />
+          </span>
         </div>
+        
         <div class="form-group">
-          <label for="password">비밀번호:</label>
-          <Password id="password" v-model="password" required :feedback="false" toggleMask />
+          <label for="password">비밀번호</label>
+          <span class="p-input-icon-left">
+            <i class="pi pi-lock" />
+            <Password 
+              id="password" 
+              v-model="password" 
+              required 
+              :feedback="false" 
+              toggleMask 
+              placeholder="••••••••"
+              inputClass="w-full"
+            />
+          </span>
         </div>
 
-        <Button type="submit" :loading="isLoading" class="p-button-primary" label="로그인" />
-        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+        <Button type="submit" :loading="isLoading" label="로그인" class="login-button" />
+        
+        <div v-if="errorMessage" class="error-container">
+          <Message severity="error" :closable="false">{{ errorMessage }}</Message>
+        </div>
       </form>
-    </Panel>
+      
+      <div class="login-footer">
+        <p>© 2024 ERP System. All rights reserved.</p>
+      </div>
+    </div>
   </div>
 </template>
   
 <style scoped>
-  /* (수정) 3. 기존 스타일을 아래 코드로 덮어쓰거나 수정 */
-  
-  .login-page-wrapper {
+  .login-container {
     display: flex;
-    /* (수정) 컨테이너를 수직(column)으로 쌓도록 변경 */
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #666666ff 0%, #1a1a20ff 100%);
+    background-color: var(--surface-0);
+    background-image: radial-gradient(circle at 50% 0%, rgba(20, 184, 166, 0.15) 0%, transparent 50%);
+    padding: 20px;
   }
-  
-  /* (추가) 4. 로고와 제목을 담는 헤더 스타일 */
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    background-color: var(--surface-card);
+    border: 1px solid var(--surface-100);
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
   .login-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo-circle {
+    width: 64px;
+    height: 64px;
+    background-color: rgba(20, 184, 166, 0.1);
+    border-radius: 50%;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    margin-bottom: 2rem; /* 패널과의 간격 */
-    color: #ffffff; /* 흰색 글자 */
+    justify-content: center;
+    margin: 0 auto 16px;
   }
-  
-  .login-icon {
-    font-size: 4rem; /* 아이콘 크기 키움 */
-    margin-bottom: 1rem;
-    color: var(--p-primary-color, #42b883); /* PrimeVue 테마의 기본 색상 */
-  }
-  
-  .login-header h2 {
+
+  .logo-circle i {
     font-size: 2rem;
-    font-weight: 600;
+    color: var(--primary-500);
+  }
+
+  .login-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 8px;
+  }
+
+  .subtitle {
+    color: var(--text-color-secondary);
+    font-size: 0.95rem;
     margin: 0;
   }
-  
-  /* (수정) 패널 스타일: margin-top 제거 (wrapper가 정렬하므로) */
-  .login-panel {
-    width: 100%;
-    max-width: 450px;
-    /* margin-top: -100px; <-- 이 줄 삭제 */
-  }
-  
-  /* (유지) 폼 내부 스타일 */
-  .login-form .form-group {
-    margin-bottom: 1.5rem;
+
+  .login-form {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 20px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-left: 4px;
+  }
+
+  :deep(.p-inputtext) {
+    width: 100%;
+    background-color: var(--surface-0);
+    border-color: var(--surface-200);
+    padding-left: 2.5rem; /* 아이콘 공간 확보 */
+  }
+
+  :deep(.p-inputtext:hover) {
+    border-color: var(--primary-400);
+  }
+
+  :deep(.p-inputtext:focus) {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+  }
+
+  /* 아이콘 스타일링 */
+  .p-input-icon-left {
+    position: relative;
+    display: block;
+    width: 100%;
+  }
+
+  .p-input-icon-left > i {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    margin-top: -0.5rem;
+    color: var(--text-color-secondary);
+    z-index: 1;
   }
   
-  .form-group :deep(.p-inputtext),
-  .form-group :deep(.p-password) {
+  :deep(.p-password) {
     width: 100%;
   }
   
-  :deep(.p-button) {
+  :deep(.p-password-input) {
     width: 100%;
   }
-  
+
+  .login-button {
+    margin-top: 8px;
+    height: 48px;
+    font-weight: 600;
+    font-size: 1rem;
+    background-color: var(--primary-600);
+    border: none;
+  }
+
+  .login-button:hover {
+    background-color: var(--primary-500);
+  }
+
+  .error-container {
+    margin-top: 10px;
+  }
+
   :deep(.p-message) {
-    margin-top: 15px;
     width: 100%;
+  }
+
+  .login-footer {
+    margin-top: 32px;
+    text-align: center;
+    border-top: 1px solid var(--surface-100);
+    padding-top: 20px;
+  }
+
+  .login-footer p {
+    color: var(--text-color-secondary);
+    font-size: 0.85rem;
+    margin: 0;
   }
 </style>

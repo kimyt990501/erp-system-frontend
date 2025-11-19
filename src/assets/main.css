@@ -1,10 +1,44 @@
 @import './base.css';
 
-/* 모든 페이지에 적용될 최소한의 body 스타일 */
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #1a1d29; /* 다크 네이비 배경 */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #e1e4e8;
+/* Global Utilities */
+a {
+  text-decoration: none;
+  color: var(--primary-color);
+  transition: 0.4s;
+}
+
+@media (hover: hover) {
+  a:hover {
+    filter: brightness(1.1);
+  }
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-200);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-300);
+}
+
+/* PrimeVue Overrides for Dark Theme Consistency */
+:root {
+  --p-primary-color: var(--primary-color);
+  --p-content-background: var(--bg-card);
+  --p-text-color: var(--text-color);
+}
+
+.p-component {
+  font-family: inherit;
 }
